@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bdjmaa0a5lvvy"
-path="res://.godot/imported/O.png-9b7b56a23242f32984cac183f77e52d1.ctex"
+uid="uid://bb6piefpj8csx"
+path="res://.godot/imported/O.png-b9131de29fff85804ae6ade7d9052f10.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://plugins/Word_blast/assets/tiles/skin_02/O.png"
-dest_files=["res://.godot/imported/O.png-9b7b56a23242f32984cac183f77e52d1.ctex"]
+source_file="res://plugins/word_blast/assets/tiles/skin_02/O.png"
+dest_files=["res://.godot/imported/O.png-b9131de29fff85804ae6ade7d9052f10.ctex"]
 
 [params]
 

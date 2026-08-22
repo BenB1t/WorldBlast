@@ -19,9 +19,14 @@ var skins: Array = []  # cells[y][x] = skin_id string, cosmetic only
 var preview_cell: Vector2i = Vector2i(-1, -1)
 var preview_valid: bool = true
 
+var _clear_effect: WordClearEffect
+var _shake_tween: Tween
+
 
 func _ready() -> void:
 	_reset_cells()
+	_clear_effect = WordClearEffect.new()
+	add_child(_clear_effect)
 	refresh_layout()
 
 
@@ -106,14 +111,24 @@ func _resolve_from(start_pos: Vector2i) -> Dictionary:
 			for c in m["cells"]:
 				cleared_set[c] = true
 
+		var affected_columns: Dictionary = {}  # x -> true, only these columns fall
+		var cleared_info: Array = []  # for the pop/fade effect
 		for c in cleared_set.keys():
+			cleared_info.append({"pos": c, "letter": cells[c.y][c.x], "skin_id": skins[c.y][c.x]})
 			cells[c.y][c.x] = ""
 			skins[c.y][c.x] = ""
+			affected_columns[c.x] = true
+
+		print("[WordGrid] cleared cells: %s | affected columns: %s" % [cleared_set.keys(), affected_columns.keys()])
 
 		words_cleared.emit(matches, cascade_depth)
 		all_matches += matches
 
-		check_positions = _apply_gravity()
+		if cleared_info.size() > 0:
+			_clear_effect.play(cleared_info)
+			_shake(cleared_info.size())
+
+		check_positions = _apply_gravity(affected_columns.keys())
 		queue_redraw()
 
 		if check_positions.is_empty():
@@ -123,13 +138,17 @@ func _resolve_from(start_pos: Vector2i) -> Dictionary:
 	return {"all_matches": all_matches, "cascade_depth": cascade_depth}
 
 
-## Compacts every column downward to fill gaps left by cleared cells.
-## Returns the positions that received a (possibly different) letter, so
-## the caller knows where to re-check for newly-formed words.
-func _apply_gravity() -> Array[Vector2i]:
+## Compacts only the given columns downward to fill gaps left by cleared
+## cells. Columns not in `columns` are left completely untouched — this
+## matters because players can place a letter in any empty cell, so it's
+## normal for a column to have a letter sitting above empty space that
+## has nothing to do with a clear. Recomputing gravity on every column
+## unconditionally would incorrectly yank those letters to the bottom.
+func _apply_gravity(columns: Array) -> Array[Vector2i]:
+	print("[WordGrid] _apply_gravity running on columns: %s" % [columns])
 	var moved_positions: Array[Vector2i] = []
 
-	for x in range(GRID_SIZE):
+	for x in columns:
 		var stack: Array = []
 		var stack_skins: Array = []
 		for y in range(GRID_SIZE):
@@ -150,6 +169,26 @@ func _apply_gravity() -> Array[Vector2i]:
 			skins[y][x] = ""
 
 	return moved_positions
+
+
+# Quick punch-shake, ported from your Block Blast BlockGrid._shake().
+# Intensity scales with how many letters cleared this wave.
+func _shake(letters_cleared: int) -> void:
+	if _shake_tween and _shake_tween.is_running():
+		_shake_tween.kill()
+
+	pivot_offset = size * 0.5
+	var shake_amount: float = clamp(2.0 + letters_cleared * 1.0, 2.0, 8.0)
+
+	_shake_tween = create_tween()
+	for i in range(3):
+		var rot := randf_range(-0.03, 0.03) * shake_amount
+		var scl := Vector2(1.0, 1.0) + Vector2(randf_range(-0.01, 0.01), randf_range(-0.01, 0.01)) * shake_amount
+		_shake_tween.tween_property(self, "rotation", rot, 0.035)
+		_shake_tween.parallel().tween_property(self, "scale", scl, 0.035)
+
+	_shake_tween.tween_property(self, "rotation", 0.0, 0.05)
+	_shake_tween.parallel().tween_property(self, "scale", Vector2.ONE, 0.05)
 
 
 # =============================================================================

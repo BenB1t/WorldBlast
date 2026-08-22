@@ -84,7 +84,13 @@ func remove_piece(index: int) -> void:
 		return
 
 	var piece: LetterPiece = slots[index]
-	slot_containers[index].remove_child(piece)
+	# The piece may already have been removed from its slot container —
+	# e.g. word_blast_game.gd reparents it to drag_layer during a drag,
+	# then removes it from drag_layer on a successful drop, before
+	# calling this. Only remove_child() if it's still actually there,
+	# or Godot errors: "p_child->data.parent != this".
+	if piece.get_parent() == slot_containers[index]:
+		slot_containers[index].remove_child(piece)
 	piece.queue_free()
 
 	slots[index] = null
