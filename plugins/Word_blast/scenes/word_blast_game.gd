@@ -11,6 +11,10 @@ const TRAY_FIT_SAFETY: float = 0.92
 
 const DRAG_LIFT := Vector2(0, -80)
 const GAME_OVER_DELAY: float = 1.1
+## If the player places this many letters in a row without clearing any
+## word, the combo streak resets — otherwise combo_count would never
+## reset now that clearing is a deliberate tap instead of automatic.
+const COMBO_RESET_TURNS: int = 3
 
 @onready var grid: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
 @onready var tray: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
@@ -18,7 +22,8 @@ const GAME_OVER_DELAY: float = 1.1
 @onready var score_label: Label = $Margin/VBoxContainer/TopBar/ScoreLabel
 
 var score: int = 0
-var combo_count: int = 0  # consecutive placements in a row that cleared something
+var combo_count: int = 0  # consecutive CLEARS (taps) in a row, resets after a cold streak
+var turns_since_last_clear: int = 0
 var is_game_over: bool = false
 
 var dragging_piece: LetterPiece = null
@@ -129,15 +134,11 @@ func _end_drag(pointer_pos: Vector2) -> void:
 	var valid: bool = grid.is_cell_empty(cell_pos)
 
 	if valid:
-		var result: Dictionary = grid.place_letter(cell_pos, piece.letter, piece.skin_id)
+		grid.place_letter(cell_pos, piece.letter, piece.skin_id)
 		drag_layer.remove_child(piece)
 		tray.remove_piece(slot_index)  # also refills this slot immediately
 
-		if result["all_matches"].is_empty():
-			combo_count = 0  # placement produced no clear — combo resets
-		else:
-			combo_count += 1
-
+		turns_since_last_clear += 1
 		_connect_tray_pieces()
 		_check_game_over()
 	else:
@@ -167,20 +168,23 @@ func _top_left_to_grid_cell(top_left: Vector2) -> Vector2i:
 	)
 
 
-## Fires once per cascade wave (grid.gd emits this per wave inside
-## _resolve_from). Scores every word found in that wave and updates the
-## running total immediately, so score climbs visibly wave by wave rather
-## than jumping all at once at the end of a cascade.
+## Fires once per cascade wave (grid.gd emits this per wave from
+## _clear_match). cascade_depth == 0 is the word the player deliberately
+## tapped; 1+ are automatic cascade waves from gravity. Combo streak is
+## tracked here since clearing (not placing) is now what "counts."
 func _on_words_cleared(matches: Array, cascade_depth: int) -> void:
+	if cascade_depth == 0:
+		if turns_since_last_clear > COMBO_RESET_TURNS:
+			combo_count = 0
+		turns_since_last_clear = 0
+
 	var wave_points: int = 0
 	for m in matches:
 		wave_points += ScoreRules.score_word(m["word"], cascade_depth, combo_count)
 	_add_score(wave_points)
 
-	# TODO: this is also the hook point for a "highlight the word before it
-	# clears" animation/delay — grid.gd currently clears immediately in the
-	# same call, so add a short await here (and a matching delay inside
-	# grid.gd's _resolve_from) once you're ready for that polish pass.
+	if cascade_depth == 0:
+		combo_count += 1
 
 
 func _add_score(points: int) -> void:
