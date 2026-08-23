@@ -19,7 +19,7 @@ const COMBO_RESET_TURNS: int = 3
 @onready var grid: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
 @onready var tray: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
 @onready var drag_layer: Control = $DragLayer
-@onready var score_label: Label = $Margin/VBoxContainer/TopBar/ScoreLabel
+@onready var current_score_label: Label = $Margin/VBoxContainer/TopBar/ScoreBox/CurrentScoreLabel
 
 var score: int = 0
 var combo_count: int = 0  # consecutive CLEARS (taps) in a row, resets after a cold streak
@@ -189,7 +189,7 @@ func _on_words_cleared(matches: Array, cascade_depth: int) -> void:
 
 func _add_score(points: int) -> void:
 	score += points
-	score_label.text = str(score)
+	current_score_label.text = "SCORE: %d" % score
 
 
 ## Since every piece is a single letter now, "does the next piece fit

@@ -15,6 +15,12 @@
 [ext_resource type="Texture2D" uid="uid://d0vxobpiqe6oi" path="res://Assets/UI/button_round_gradient_red.svg" id="13_5n0dv"]
 [ext_resource type="Texture2D" uid="uid://baedhlt3ske7n" path="res://Assets/Icons/icon_settings.svg" id="14_ne6ao"]
 [ext_resource type="Texture2D" uid="uid://ctvds01co6gyy" path="res://Assets/UI/star.svg" id="15_8dnnj"]
+[ext_resource type="Texture2D" uid="uid://ddhsuqqon7c62" path="res://Assets/UI/button_square_border.svg" id="16_ehtkc"]
+[ext_resource type="Texture2D" uid="uid://cj7e2mnh41ja0" path="res://Assets/UI/cross.png" id="17_6dk6o"]
+[ext_resource type="Texture2D" uid="uid://cggji7gvxqd3h" path="res://Assets/UI/button_rectangle_flat.svg" id="18_jr6u5"]
+[ext_resource type="Texture2D" uid="uid://c7ou7n3stfinc" path="res://Assets/UI/arrow_basic_s_small.svg" id="19_6m47u"]
+[ext_resource type="Texture2D" uid="uid://bjestjin2ksn8" path="res://Assets/UI/button_rectangle_depth_gradient_blue.svg" id="20_84iac"]
+[ext_resource type="Texture2D" uid="uid://bkgmm6ar3wwxo" path="res://Assets/UI/button_rectangle_gradient_blue.svg" id="21_5n0dv"]
 
 [sub_resource type="Theme" id="Theme_tt8ml"]
 default_font = ExtResource("2_8dnnj")
@@ -29,6 +35,24 @@ texture_margin_bottom = 20.0
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_hkdq0"]
 texture = ExtResource("5_ujyyl")
+texture_margin_left = 20.0
+texture_margin_top = 20.0
+texture_margin_right = 20.0
+texture_margin_bottom = 20.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_ne6ao"]
+texture = ExtResource("16_ehtkc")
+texture_margin_left = 20.0
+texture_margin_top = 20.0
+texture_margin_right = 20.0
+texture_margin_bottom = 20.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tt8ml"]
+bg_color = Color(1, 1, 1, 1)
+border_color = Color(0.22745098, 0.2, 0.16862746, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_xcoo4"]
+texture = ExtResource("18_jr6u5")
 texture_margin_left = 20.0
 texture_margin_top = 20.0
 texture_margin_right = 20.0
@@ -217,3 +241,105 @@ offset_bottom = 259.0
 rotation = 1.0576695
 scale = Vector2(0.8, 0.8)
 texture_normal = ExtResource("15_8dnnj")
+
+[node name="ProfileCard" type="PopupPanel" parent="." unique_id=1262019144]
+oversampling_override = 1.0
+initial_position = 1
+size = Vector2i(340, 420)
+theme_override_styles/panel = SubResource("StyleBoxTexture_ne6ao")
+
+[node name="MarginContainer" type="MarginContainer" parent="ProfileCard" unique_id=575982858]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 400.0
+
+[node name="Content" type="VBoxContainer" parent="ProfileCard/MarginContainer" unique_id=50448217]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="HeaderRow" type="HBoxContainer" parent="ProfileCard/MarginContainer/Content" unique_id=130412004]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ProfileCard/MarginContainer/Content/HeaderRow" unique_id=42114648]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.22745098, 0.2, 0.16862746, 1)
+theme_override_fonts/font = ExtResource("3_m3bi6")
+theme_override_font_sizes/font_size = 28
+text = "PROFILE"
+
+[node name="TextureButton" type="TextureButton" parent="ProfileCard/MarginContainer/Content/HeaderRow" unique_id=1655007225]
+layout_mode = 2
+texture_normal = ExtResource("12_84iac")
+texture_pressed = ExtResource("13_5n0dv")
+
+[node name="TextureRect" type="TextureRect" parent="ProfileCard/MarginContainer/Content/HeaderRow/TextureButton" unique_id=1300242452]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("17_6dk6o")
+
+[node name="NameField" type="VBoxContainer" parent="ProfileCard/MarginContainer/Content" unique_id=2041729377]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ProfileCard/MarginContainer/Content/NameField" unique_id=1973894903]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.023529412, 0.03529412, 0.047058824, 0.4862745)
+text = "NAME"
+
+[node name="NameInput" type="LineEdit" parent="ProfileCard/MarginContainer/Content/NameField" unique_id=984496179]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22745098, 0.2, 0.16862746, 1)
+theme_override_colors/font_placeholder_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_tt8ml")
+placeholder_text = "Enter Your Name"
+alignment = 1
+max_length = 21
+
+[node name="CountryField" type="VBoxContainer" parent="ProfileCard/MarginContainer/Content" unique_id=134267491]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ProfileCard/MarginContainer/Content/CountryField" unique_id=358460670]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.023529412, 0.03529412, 0.047058824, 0.4862745)
+text = "COUNTRY"
+
+[node name="OptionButton" type="OptionButton" parent="ProfileCard/MarginContainer/Content/CountryField" unique_id=1084541334]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_xcoo4")
+theme_override_icons/arrow = ExtResource("19_6m47u")
+
+[node name="TextureButton" type="TextureButton" parent="ProfileCard/MarginContainer/Content" unique_id=958834169]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+texture_normal = ExtResource("20_84iac")
+texture_pressed = ExtResource("21_5n0dv")
+
+[node name="Label" type="Label" parent="ProfileCard/MarginContainer/Content/TextureButton" unique_id=523534101]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = ExtResource("3_m3bi6")
+theme_override_font_sizes/font_size = 24
+text = "SAVE"

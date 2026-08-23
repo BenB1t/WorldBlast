@@ -2,7 +2,14 @@
 
 [ext_resource type="Script" uid="uid://sgic8ku0kw6k" path="res://plugins/word_blast/scenes/word_blast_game.gd" id="1"]
 [ext_resource type="Script" uid="uid://f3btcmnv46n5" path="res://plugins/word_blast/scenes/grid.gd" id="2"]
+[ext_resource type="Texture2D" uid="uid://wtaocaucoqyg" path="res://Assets/UI/button_round_depth_gloss_red.svg" id="2_ywp3r"]
 [ext_resource type="Script" uid="uid://bjhdpb48fi3qs" path="res://plugins/word_blast/scenes/letter_tray.gd" id="3"]
+[ext_resource type="Texture2D" uid="uid://d0vxobpiqe6oi" path="res://Assets/UI/button_round_gradient_red.svg" id="3_bekf3"]
+[ext_resource type="Texture2D" uid="uid://dtikgwbmi70yk" path="res://Assets/UI/door.png" id="4_q5san"]
+[ext_resource type="FontFile" uid="uid://pjvdbvetd45q" path="res://Assets/Fonts/Viga-Regular.ttf" id="5_3687y"]
+[ext_resource type="Texture2D" uid="uid://b5t7vikppvw7p" path="res://Assets/UI/button_round_depth_gloss.svg" id="6_df2ts"]
+[ext_resource type="Texture2D" uid="uid://rcjtg5b0tgqn" path="res://Assets/UI/button_round_gradient.svg" id="7_xy86m"]
+[ext_resource type="Texture2D" uid="uid://becarxsm0wx8" path="res://Assets/UI/return.png" id="8_31klc"]
 
 [node name="WordBlastGame" type="Control" unique_id=1022956543]
 layout_mode = 3
@@ -38,22 +45,73 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="TopBar" type="Control" parent="Margin/VBoxContainer" unique_id=1258053813]
+[node name="TopBar" type="HBoxContainer" parent="Margin/VBoxContainer" unique_id=1719050863]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 
-[node name="ScoreLabel" type="Label" parent="Margin/VBoxContainer/TopBar" unique_id=1934700406]
+[node name="ReturnButton" type="TextureButton" parent="Margin/VBoxContainer/TopBar" unique_id=201014786]
+layout_mode = 2
+texture_normal = ExtResource("2_ywp3r")
+texture_pressed = ExtResource("3_bekf3")
+
+[node name="TextureRect" type="TextureRect" parent="Margin/VBoxContainer/TopBar/ReturnButton" unique_id=1549794123]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -25.0
+offset_top = -29.0
+offset_right = 25.0
+offset_bottom = 21.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(0.22745098, 0.2, 0.16862746, 1)
-theme_override_font_sizes/font_size = 32
-text = "0"
+mouse_filter = 2
+texture = ExtResource("4_q5san")
+
+[node name="ScoreBox" type="VBoxContainer" parent="Margin/VBoxContainer/TopBar" unique_id=2133870323]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+alignment = 1
+
+[node name="BestScoreLabel" type="Label" parent="Margin/VBoxContainer/TopBar/ScoreBox" unique_id=419767361]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22745098, 0.2, 0.16862746, 0.6509804)
+theme_override_fonts/font = ExtResource("5_3687y")
+theme_override_font_sizes/font_size = 18
+text = "BEST: 0"
 horizontal_alignment = 1
-vertical_alignment = 1
+
+[node name="CurrentScoreLabel" type="Label" parent="Margin/VBoxContainer/TopBar/ScoreBox" unique_id=935343203]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22745098, 0.2, 0.16862746, 1)
+theme_override_fonts/font = ExtResource("5_3687y")
+theme_override_font_sizes/font_size = 28
+text = "SCORE: 0"
+horizontal_alignment = 1
+
+[node name="ReturnButton2" type="TextureButton" parent="Margin/VBoxContainer/TopBar" unique_id=326974893]
+layout_mode = 2
+texture_normal = ExtResource("6_df2ts")
+texture_pressed = ExtResource("7_xy86m")
+
+[node name="TextureRect" type="TextureRect" parent="Margin/VBoxContainer/TopBar/ReturnButton2" unique_id=624329365]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -25.0
+offset_top = -29.0
+offset_right = 25.0
+offset_bottom = 21.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("8_31klc")
 
 [node name="CenterContainer" type="CenterContainer" parent="Margin/VBoxContainer" unique_id=2091018982]
 layout_mode = 2
