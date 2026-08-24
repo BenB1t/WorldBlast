@@ -3,14 +3,14 @@
 [ext_resource type="Texture2D" uid="uid://b8ttf0gkkgnjo" path="res://Assets/Background/1.png" id="1_vtepg"]
 [ext_resource type="FontFile" uid="uid://bx5tmr2xemvoi" path="res://Assets/Fonts/LilitaOne-Regular.ttf" id="2_8dnnj"]
 [ext_resource type="FontFile" uid="uid://pjvdbvetd45q" path="res://Assets/Fonts/Viga-Regular.ttf" id="3_m3bi6"]
-[ext_resource type="Texture2D" uid="uid://bh5h0utrfn73e" path="res://Assets/UI/button_rectangle_depth_gradient.svg" id="4_wyh8j"]
+[ext_resource type="Texture2D" uid="uid://cahtr211e1bah" path="res://Assets/UI/button_rectangle_depth_gradient_yellow.svg" id="4_ehtkc"]
 [ext_resource type="Texture2D" uid="uid://dk1riknpe0k02" path="res://Assets/UI/button_rectangle_gradient.svg" id="5_ujyyl"]
 [ext_resource type="Texture2D" uid="uid://b5t7vikppvw7p" path="res://Assets/UI/button_round_depth_gloss.svg" id="6_mkpwh"]
 [ext_resource type="Texture2D" uid="uid://rcjtg5b0tgqn" path="res://Assets/UI/button_round_gradient.svg" id="7_4nkqq"]
 [ext_resource type="Texture2D" uid="uid://b8ynjew7jwgb6" path="res://Assets/Icons/icon_podium.svg" id="8_ehtkc"]
 [ext_resource type="Texture2D" uid="uid://u6ccmjrggbsj" path="res://Assets/UI/button_round_depth_gloss_yellow.svg" id="9_6dk6o"]
 [ext_resource type="Texture2D" uid="uid://duillwvge4a7w" path="res://Assets/UI/button_round_gradient_yellow.svg" id="10_jr6u5"]
-[ext_resource type="Texture2D" uid="uid://ljxk1tk0hv84" path="res://Assets/Icons/icon_volume.svg" id="11_6m47u"]
+[ext_resource type="Texture2D" uid="uid://dvp2ps0fin2ia" path="res://Assets/Icons/library-big.svg" id="11_6dk6o"]
 [ext_resource type="Texture2D" uid="uid://wtaocaucoqyg" path="res://Assets/UI/button_round_depth_gloss_red.svg" id="12_84iac"]
 [ext_resource type="Texture2D" uid="uid://d0vxobpiqe6oi" path="res://Assets/UI/button_round_gradient_red.svg" id="13_5n0dv"]
 [ext_resource type="Texture2D" uid="uid://baedhlt3ske7n" path="res://Assets/Icons/icon_settings.svg" id="14_ne6ao"]
@@ -27,13 +27,13 @@ default_font = ExtResource("2_8dnnj")
 default_font_size = 64
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_fmarx"]
-texture = ExtResource("4_wyh8j")
+texture = ExtResource("4_ehtkc")
 texture_margin_left = 20.0
 texture_margin_top = 20.0
 texture_margin_right = 20.0
 texture_margin_bottom = 20.0
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_hkdq0"]
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_jr6u5"]
 texture = ExtResource("5_ujyyl")
 texture_margin_left = 20.0
 texture_margin_top = 20.0
@@ -116,7 +116,7 @@ theme_override_constants/outline_size = 17
 theme_override_fonts/font = ExtResource("3_m3bi6")
 theme_override_font_sizes/font_size = 36
 theme_override_styles/normal = SubResource("StyleBoxTexture_fmarx")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_hkdq0")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_jr6u5")
 text = "START"
 
 [node name="IconRow" type="HBoxContainer" parent="." unique_id=880180830]
@@ -172,7 +172,7 @@ offset_right = 23.0
 offset_bottom = 19.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("11_6m47u")
+texture = ExtResource("11_6dk6o")
 
 [node name="TextureButton3" type="TextureButton" parent="IconRow" unique_id=888564603]
 layout_mode = 2

@@ -36,6 +36,13 @@ var pending_matches: Array = []
 var preview_cell: Vector2i = Vector2i(-1, -1)
 var preview_valid: bool = true
 
+## Optional. Left null in casual play, in which case word reuse is
+## unrestricted (identical to pre-Section-8 behavior). Assign a real
+## WordAvailabilityTracker instance for ranked play — see that class for
+## the full rationale. Set this any time before the first
+## place_letter() call (or before any words could already be pending).
+var availability_tracker: WordAvailabilityTracker = null
+
 ## Internal running clock (seconds) used to drive the pop-in and pulse
 ## animations. Vector2i -> time (in this clock) the tile was placed.
 var _elapsed: float = 0.0
@@ -44,6 +51,15 @@ var _placement_times: Dictionary = {}
 var _clear_effect: WordClearEffect
 var _shake_tween: Tween
 
+## Shake jitter is purely cosmetic — it never affects `cells`, so it does
+## NOT need to be deterministic/seeded. It gets its own RNG instance
+## specifically so it can never share (and therefore never desync) the
+## LetterBag's seeded stream, which DOES need to stay reproducible for
+## ranked replay. Using Godot's global randf_range() here would silently
+## consume rolls from whatever stream LetterBag might also be drawing
+## from, if the two were ever coupled by future refactors.
+var _shake_rng := RandomNumberGenerator.new()
+
 
 func _ready() -> void:
 	_reset_cells()
@@ -51,6 +67,7 @@ func _ready() -> void:
 	add_child(_clear_effect)
 	refresh_layout()
 	set_process(true)
+	_shake_rng.randomize()
 
 
 func _process(delta: float) -> void:
@@ -130,6 +147,11 @@ func place_letter(pos: Vector2i, letter: String, skin_id: String) -> void:
 ## Rebuilds pending_matches from scratch by scanning every occupied cell.
 ## The board is only 8x8, so this is cheap enough to just redo fully
 ## rather than track incremental diffs — much simpler to get right.
+##
+## Note: this does NOT filter out already-used words (see
+## availability_tracker). A repeated word still becomes pending and is
+## still tappable/clearable — it's just worth zero points the second
+## time. See _clear_connected_group(), which is where that's enforced.
 func _rescan_pending_matches() -> void:
 	var found: Dictionary = {}  # dedupe key -> match dict
 	for y in range(GRID_SIZE):
@@ -216,6 +238,20 @@ func _clear_connected_group(start_match: Dictionary) -> void:
 		for c in m["cells"]:
 			cleared_set[c] = true
 
+	# Tag each match with whether it was ALREADY used before this clear —
+	# checked before mark_used() below, since mark_used() would otherwise
+	# make every word look "already used" by the time anyone can ask.
+	# word_blast_game.gd reads this tag to award zero points for a
+	# repeat, while still letting the clear itself happen normally (the
+	# word still visually clears — it's just worth nothing the 2nd+ time).
+	if availability_tracker != null:
+		for m in group:
+			m["already_used"] = not availability_tracker.is_available(m["word"])
+			availability_tracker.mark_used(m["word"])
+	else:
+		for m in group:
+			m["already_used"] = false
+
 	var cleared_info: Array = []
 	for c in cleared_set.keys():
 		cleared_info.append({"pos": c, "letter": cells[c.y][c.x], "skin_id": skins[c.y][c.x]})
@@ -271,8 +307,8 @@ func _shake(letters_cleared: int) -> void:
 
 	_shake_tween = create_tween()
 	for i in range(3):
-		var rot := randf_range(-0.03, 0.03) * shake_amount
-		var scl := Vector2(1.0, 1.0) + Vector2(randf_range(-0.01, 0.01), randf_range(-0.01, 0.01)) * shake_amount
+		var rot := _shake_rng.randf_range(-0.03, 0.03) * shake_amount
+		var scl := Vector2(1.0, 1.0) + Vector2(_shake_rng.randf_range(-0.01, 0.01), _shake_rng.randf_range(-0.01, 0.01)) * shake_amount
 		_shake_tween.tween_property(self, "rotation", rot, 0.035)
 		_shake_tween.parallel().tween_property(self, "scale", scl, 0.035)
 

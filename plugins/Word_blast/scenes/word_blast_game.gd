@@ -16,6 +16,22 @@ const GAME_OVER_DELAY: float = 1.1
 ## reset now that clearing is a deliberate tap instead of automatic.
 const COMBO_RESET_TURNS: int = 3
 
+## Casual games leave this false: word reuse is unrestricted, matching
+## the game's behavior before Section 8 existed. Ranked games (once a
+## proper mode-select/launcher exists) should set this to true BEFORE
+## this scene enters the tree — e.g. instantiate the scene, set
+## `word_blast_game.is_ranked = true`, then add it to the tree — since
+## availability_tracker must be assigned in _enter_tree(), before
+## LetterTray's _ready() runs.
+@export var is_ranked: bool = false
+
+## The frozen ruleset actually in effect for this game. Null in casual
+## play (is_ranked = false) — nothing reads this in that case. Loaded in
+## _enter_tree() when is_ranked is true, same timing constraint as
+## everything else there. See ranked_ruleset_v1.gd for what this governs
+## and why editing it after scores are published is forbidden.
+var active_ruleset: RankedRuleset = null
+
 @onready var grid: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
 @onready var tray: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
 @onready var drag_layer: Control = $DragLayer
@@ -30,6 +46,29 @@ var dragging_piece: LetterPiece = null
 var dragging_slot_index: int = -1
 var drag_origin_parent: Node = null
 var drag_origin_index: int = -1
+
+
+## _enter_tree() runs top-down (parent before children), unlike _ready()
+## which runs bottom-up (children before parent). LetterTray._ready()
+## calls refill() immediately, which needs letter_bag already assigned —
+## so bag injection MUST happen here, not in _ready(). Word-reuse
+## enforcement (availability_tracker) is assigned here too, gated by
+## is_ranked, for the same reason: grid's first _rescan happens as soon
+## as letters are placed, so the tracker needs to exist before any of
+## that starts.
+##
+## No seed passed = casual play, bag randomizes itself normally. For
+## ranked mode, generate/receive a real seed and pass it here instead:
+##   tray.letter_bag = LetterBag.new(ranked_seed)
+func _enter_tree() -> void:
+	var tray_node: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
+	tray_node.letter_bag = LetterBag.new()
+
+	if is_ranked:
+		active_ruleset = RankedRuleset.new()
+		if active_ruleset.WORD_REUSE_ALLOWED:
+			var grid_node: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
+			grid_node.availability_tracker = WordAvailabilityTracker.new()
 
 
 func _ready() -> void:
@@ -172,6 +211,15 @@ func _top_left_to_grid_cell(top_left: Vector2) -> Vector2i:
 ## _clear_match). cascade_depth == 0 is the word the player deliberately
 ## tapped; 1+ are automatic cascade waves from gravity. Combo streak is
 ## tracked here since clearing (not placing) is now what "counts."
+##
+## Each match may carry an "already_used" flag (set by grid.gd when
+## availability_tracker is assigned, i.e. ranked mode). A repeated word
+## still clears normally and still counts toward combo — its points are
+## scaled by active_ruleset.REUSED_WORD_SCORE_MULTIPLIER (0.0 in
+## ranked_v1, i.e. zero points) rather than a hardcoded skip, so the
+## frozen ruleset stays the single source of truth for that number. In
+## casual mode (active_ruleset is null / flag absent), full points
+## always apply, same as before Section 8 existed.
 func _on_words_cleared(matches: Array, cascade_depth: int) -> void:
 	if cascade_depth == 0:
 		if turns_since_last_clear > COMBO_RESET_TURNS:
@@ -180,7 +228,10 @@ func _on_words_cleared(matches: Array, cascade_depth: int) -> void:
 
 	var wave_points: int = 0
 	for m in matches:
-		wave_points += ScoreRules.score_word(m["word"], cascade_depth, combo_count)
+		var word_points: int = ScoreRules.score_word(m["word"], cascade_depth, combo_count)
+		if m.get("already_used", false) and active_ruleset != null:
+			word_points = int(round(word_points * active_ruleset.REUSED_WORD_SCORE_MULTIPLIER))
+		wave_points += word_points
 	_add_score(wave_points)
 
 	if cascade_depth == 0:
@@ -192,11 +243,19 @@ func _add_score(points: int) -> void:
 	current_score_label.text = "SCORE: %d" % score
 
 
-## Since every piece is a single letter now, "does the next piece fit
-## anywhere" simplifies to "is the board not completely full" — no shape
-## fitting check needed, unlike your original _shape_fits_anywhere().
+## A full board is NOT automatically game over: if there's at least one
+## pending (highlighted, tappable) word sitting on it, the player still
+## has a legal move — tap to clear it, freeing cells. This matters
+## specifically for the case where the placement that just filled the
+## last empty cell is ALSO the placement that completed a word: the
+## board is technically full for one frame, but the player hasn't
+## actually run out of options yet.
+##
+## True game over is: board full AND nothing pending to clear.
 func _check_game_over() -> void:
 	if grid.has_any_empty_cell():
+		return
+	if not grid.pending_matches.is_empty():
 		return
 	_trigger_game_over()
 
