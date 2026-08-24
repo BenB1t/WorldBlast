@@ -11,34 +11,21 @@ const TRAY_FIT_SAFETY: float = 0.92
 
 const DRAG_LIFT := Vector2(0, -80)
 const GAME_OVER_DELAY: float = 1.1
-## If the player places this many letters in a row without clearing any
-## word, the combo streak resets — otherwise combo_count would never
-## reset now that clearing is a deliberate tap instead of automatic.
 const COMBO_RESET_TURNS: int = 3
 
-## Casual games leave this false: word reuse is unrestricted, matching
-## the game's behavior before Section 8 existed. Ranked games (once a
-## proper mode-select/launcher exists) should set this to true BEFORE
-## this scene enters the tree — e.g. instantiate the scene, set
-## `word_blast_game.is_ranked = true`, then add it to the tree — since
-## availability_tracker must be assigned in _enter_tree(), before
-## LetterTray's _ready() runs.
 @export var is_ranked: bool = false
 
-## The frozen ruleset actually in effect for this game. Null in casual
-## play (is_ranked = false) — nothing reads this in that case. Loaded in
-## _enter_tree() when is_ranked is true, same timing constraint as
-## everything else there. See ranked_ruleset_v1.gd for what this governs
-## and why editing it after scores are published is forbidden.
 var active_ruleset: RankedRuleset = null
 
 @onready var grid: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
 @onready var tray: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
 @onready var drag_layer: Control = $DragLayer
 @onready var current_score_label: Label = $Margin/VBoxContainer/TopBar/ScoreBox/CurrentScoreLabel
+@onready var quit_button: TextureButton = $Margin/VBoxContainer/TopBar/ReturnButton
+@onready var restart_button: TextureButton = $Margin/VBoxContainer/TopBar/ReturnButton2
 
 var score: int = 0
-var combo_count: int = 0  # consecutive CLEARS (taps) in a row, resets after a cold streak
+var combo_count: int = 0
 var turns_since_last_clear: int = 0
 var is_game_over: bool = false
 
@@ -47,36 +34,74 @@ var dragging_slot_index: int = -1
 var drag_origin_parent: Node = null
 var drag_origin_index: int = -1
 
+var game_seed: int = -1
+var game_id: String = ""
+var event_log: GameEventLog = null
 
-## _enter_tree() runs top-down (parent before children), unlike _ready()
-## which runs bottom-up (children before parent). LetterTray._ready()
-## calls refill() immediately, which needs letter_bag already assigned —
-## so bag injection MUST happen here, not in _ready(). Word-reuse
-## enforcement (availability_tracker) is assigned here too, gated by
-## is_ranked, for the same reason: grid's first _rescan happens as soon
-## as letters are placed, so the tracker needs to exist before any of
-## that starts.
-##
-## No seed passed = casual play, bag randomizes itself normally. For
-## ranked mode, generate/receive a real seed and pass it here instead:
-##   tray.letter_bag = LetterBag.new(ranked_seed)
+var _resumed_headless: HeadlessGame = null
+var _resumed_log: GameEventLog = null
+
+
 func _enter_tree() -> void:
+	var save_log := GameSave.read()
+	if save_log != null and not save_log.finished:
+		var result := GameReplayer.replay(save_log.to_dictionary())
+		if result["valid"]:
+			_resumed_headless = result["game"]
+			_resumed_log = save_log
+
 	var tray_node: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
-	tray_node.letter_bag = LetterBag.new()
+	if _resumed_headless != null:
+		tray_node.letter_bag = _resumed_headless.letter_bag
+		is_ranked = _resumed_headless.is_ranked
+	else:
+		tray_node.letter_bag = LetterBag.new()
 
 	if is_ranked:
 		active_ruleset = RankedRuleset.new()
 		if active_ruleset.WORD_REUSE_ALLOWED:
 			var grid_node: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
-			grid_node.availability_tracker = WordAvailabilityTracker.new()
+			if _resumed_headless != null and _resumed_headless.availability_tracker != null:
+				grid_node.availability_tracker = _resumed_headless.availability_tracker
+			else:
+				grid_node.availability_tracker = WordAvailabilityTracker.new()
 
 
 func _ready() -> void:
 	_configure_layout()
+
+	# Connect top bar buttons
+	quit_button.pressed.connect(_on_quit_to_menu_pressed)
+	restart_button.pressed.connect(_on_restart_pressed)
+
+	# Hydrate visuals from headless replay or start fresh
+	if _resumed_headless != null:
+		event_log = _resumed_log
+		game_seed = _resumed_headless.game_seed
+		game_id = _resumed_headless.game_id
+		score = _resumed_headless.score
+		combo_count = _resumed_headless.combo_count
+		turns_since_last_clear = _resumed_headless.turns_since_last_clear
+
+		grid.load_snapshot(_resumed_headless)
+		tray.load_snapshot(_resumed_headless)
+		_update_score_label()
+		print("[WordBlast] Resumed saved game: %s" % game_id)
+	else:
+		_start_new_game()
+
 	_connect_tray_pieces()
 	tray.tray_refilled.connect(_connect_tray_pieces)
 	get_viewport().size_changed.connect(_configure_layout)
 	grid.words_cleared.connect(_on_words_cleared)
+
+
+func _start_new_game() -> void:
+	game_seed = randi()
+	game_id = "game_" + str(Time.get_unix_time_from_system()) + "_" + str(randi())
+	event_log = GameEventLog.new()
+	event_log.begin(game_id, game_seed, is_ranked, "ranked_v1" if is_ranked else "")
+	GameSave.write(event_log)
 
 
 func _configure_layout() -> void:
@@ -174,8 +199,13 @@ func _end_drag(pointer_pos: Vector2) -> void:
 
 	if valid:
 		grid.place_letter(cell_pos, piece.letter, piece.skin_id)
+
+		if event_log != null:
+			event_log.log_place(piece.letter, cell_pos.x, cell_pos.y, piece.skin_id)
+			GameSave.write(event_log)
+
 		drag_layer.remove_child(piece)
-		tray.remove_piece(slot_index)  # also refills this slot immediately
+		tray.remove_piece(slot_index)
 
 		turns_since_last_clear += 1
 		_connect_tray_pieces()
@@ -207,20 +237,11 @@ func _top_left_to_grid_cell(top_left: Vector2) -> Vector2i:
 	)
 
 
-## Fires once per cascade wave (grid.gd emits this per wave from
-## _clear_match). cascade_depth == 0 is the word the player deliberately
-## tapped; 1+ are automatic cascade waves from gravity. Combo streak is
-## tracked here since clearing (not placing) is now what "counts."
-##
-## Each match may carry an "already_used" flag (set by grid.gd when
-## availability_tracker is assigned, i.e. ranked mode). A repeated word
-## still clears normally and still counts toward combo — its points are
-## scaled by active_ruleset.REUSED_WORD_SCORE_MULTIPLIER (0.0 in
-## ranked_v1, i.e. zero points) rather than a hardcoded skip, so the
-## frozen ruleset stays the single source of truth for that number. In
-## casual mode (active_ruleset is null / flag absent), full points
-## always apply, same as before Section 8 existed.
-func _on_words_cleared(matches: Array, cascade_depth: int) -> void:
+func _on_words_cleared(matches: Array, cascade_depth: int, tapped_cell: Vector2i) -> void:
+	if event_log != null:
+		event_log.log_clear(tapped_cell.x, tapped_cell.y)
+		GameSave.write(event_log)
+
 	if cascade_depth == 0:
 		if turns_since_last_clear > COMBO_RESET_TURNS:
 			combo_count = 0
@@ -240,18 +261,13 @@ func _on_words_cleared(matches: Array, cascade_depth: int) -> void:
 
 func _add_score(points: int) -> void:
 	score += points
+	_update_score_label()
+
+
+func _update_score_label() -> void:
 	current_score_label.text = "SCORE: %d" % score
 
 
-## A full board is NOT automatically game over: if there's at least one
-## pending (highlighted, tappable) word sitting on it, the player still
-## has a legal move — tap to clear it, freeing cells. This matters
-## specifically for the case where the placement that just filled the
-## last empty cell is ALSO the placement that completed a word: the
-## board is technically full for one frame, but the player hasn't
-## actually run out of options yet.
-##
-## True game over is: board full AND nothing pending to clear.
 func _check_game_over() -> void:
 	if grid.has_any_empty_cell():
 		return
@@ -265,8 +281,25 @@ func _trigger_game_over() -> void:
 		return
 	is_game_over = true
 
+	if event_log != null:
+		event_log.log_finish(score)
+		GameSave.write(event_log)
+
 	print("[WordBlast] Game over. Final score: %d" % score)
-	# Hook up your GameOverOverlay here the same way block_blast_game.gd
-	# does — show_game_over(score), await the delay, then hand off however
-	# your host shell expects (BeatIt.finish_game equivalent, or just
-	# change_scene_to_file back to the title screen).
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_WM_GO_BACK_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
+		if event_log != null and not event_log.finished:
+			GameSave.write(event_log)
+
+
+func _on_restart_pressed() -> void:
+	GameSave.delete_save()
+	Nav.restart_game()
+
+
+func _on_quit_to_menu_pressed() -> void:
+	if event_log != null and not event_log.finished:
+		GameSave.write(event_log)
+	Nav.go_to_menu()

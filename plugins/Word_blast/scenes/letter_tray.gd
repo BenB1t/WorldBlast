@@ -1,11 +1,15 @@
 extends HBoxContainer
 class_name LetterTray
+
 const LETTER_PIECE_SCENE = preload("res://plugins/word_blast/scenes/letter_piece.tscn")
 const SLOT_COUNT: int = 3
+
 ## A single letter always occupies exactly 1 cell of footprint, unlike
 ## your original SLOT_CELLS = 5 (which had to fit the largest shape).
 const SLOT_CELLS: int = 1
+
 signal tray_refilled
+
 var slots: Array[LetterPiece] = []
 var slot_containers: Array[Control] = []
 
@@ -28,6 +32,7 @@ func _ready() -> void:
 	slots.fill(null)
 	refresh_layout()
 	refill()
+
 func refresh_layout() -> void:
 	var tray_scale: float = BlockBlastLayout.get_tray_scale()
 	var slot_size: float = SLOT_CELLS * BlockBlastLayout.cell_size * tray_scale
@@ -38,6 +43,7 @@ func refresh_layout() -> void:
 		if piece != null:
 			piece.refresh_layout(tray_scale)
 			_position_piece_in_slot(i)
+
 ## Word Blast refills one slot at a time as soon as it's placed (unlike
 ## Block Blast, which waits for all 3 to empty) — this keeps the player
 ## always holding 3 options rather than draining down to fewer choices,
@@ -48,9 +54,11 @@ func refill() -> void:
 		if slots[i] == null:
 			_spawn_slot(i)
 	tray_refilled.emit()
+
 func refill_slot(index: int) -> void:
 	_spawn_slot(index)
 	tray_refilled.emit()
+
 func _spawn_slot(index: int) -> void:
 	var piece: LetterPiece = LETTER_PIECE_SCENE.instantiate()
 	var letter: String = letter_bag.random_letter()
@@ -59,8 +67,10 @@ func _spawn_slot(index: int) -> void:
 	piece.set_piece(letter, skin_id, BlockBlastLayout.get_tray_scale())
 	slots[index] = piece
 	_position_piece_in_slot(index)
+
 func reposition_piece(index: int) -> void:
 	_position_piece_in_slot(index)
+
 func _position_piece_in_slot(index: int) -> void:
 	var piece: LetterPiece = slots[index]
 	if piece == null:
@@ -70,6 +80,7 @@ func _position_piece_in_slot(index: int) -> void:
 		(slot_size.x - piece.full_size.x) * 0.5,
 		slot_size.y - piece.full_size.y
 	)
+
 func remove_piece(index: int) -> void:
 	if index < 0 or index >= SLOT_COUNT or slots[index] == null:
 		return
@@ -84,7 +95,35 @@ func remove_piece(index: int) -> void:
 	piece.queue_free()
 	slots[index] = null
 	refill_slot(index)
+
 func get_piece_at(index: int) -> LetterPiece:
 	if index < 0 or index >= SLOT_COUNT:
 		return null
 	return slots[index]
+
+# =============================================================================
+# SAVE/RESUME HYDRATION
+# =============================================================================
+
+## Injects a previously saved headless game state into the visual tray.
+## Used by word_blast_game.gd to resume a game seamlessly after closing
+## the app. Skins are re-randomized because they are purely cosmetic and
+## not tracked in the event log to save space.
+func load_snapshot(headless: HeadlessGame) -> void:
+	# Clear existing visual slots
+	for i in range(SLOT_COUNT):
+		if slots[i] != null:
+			if slots[i].get_parent() == slot_containers[i]:
+				slot_containers[i].remove_child(slots[i])
+			slots[i].queue_free()
+			slots[i] = null
+	
+	# Inject letters from headless state
+	for i in range(SLOT_COUNT):
+		var piece: LetterPiece = LETTER_PIECE_SCENE.instantiate()
+		var letter: String = headless.tray[i]
+		var skin_id: String = LetterTile.random_skin_id() # Skins are cosmetic
+		slot_containers[i].add_child(piece)
+		piece.set_piece(letter, skin_id, BlockBlastLayout.get_tray_scale())
+		slots[i] = piece
+		_position_piece_in_slot(i)

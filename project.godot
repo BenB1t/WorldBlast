@@ -18,7 +18,10 @@ config/icon="res://icon.svg"
 [autoload]
 
 BlockBlastLayout="*uid://dqje4geo6vhad"
-WordDictionary="*uid://b4v00uyfkg7xu"
+Nav="*uid://bmrmrfonnuatx"
+ApiClient="*uid://dh5oc405ib307"
+PlayerIdentity="*uid://b23amtrtvual2"
+RankedSession="*uid://m3s5m4n6jdeo"
 
 [display]
 

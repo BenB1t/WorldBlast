@@ -22,7 +22,7 @@ const PULSE_MAX_ALPHA: float = 0.55
 ## Emitted once when the player taps a word to clear it. cascade_depth is
 ## always 0 — there is no gravity, so there are no automatic cascade waves.
 ## The parameter is kept so existing callers (e.g. scoring code) don't break.
-signal words_cleared(matches: Array, cascade_depth: int)
+signal words_cleared(matches: Array, cascade_depth: int, tapped_cell: Vector2i)
 
 var cells: Array = []  # cells[y][x] = "" or a single uppercase letter
 var skins: Array = []  # cells[y][x] = skin_id string, cosmetic only
@@ -190,7 +190,7 @@ func _handle_tap(local_pos: Vector2) -> void:
 
 	var tapped_match = _find_pending_match_at(cell)
 	if tapped_match != null:
-		_clear_connected_group(tapped_match)
+		_clear_connected_group(tapped_match, cell)
 
 
 func _find_pending_match_at(cell: Vector2i):
@@ -205,7 +205,7 @@ func _find_pending_match_at(cell: Vector2i):
 ## sharing the D — but leaves unrelated words elsewhere on the board
 ## (e.g. "HAT") untouched. This is a connected-components walk over
 ## pending_matches using "shares a cell" as the edge.
-func _clear_connected_group(start_match: Dictionary) -> void:
+func _clear_connected_group(start_match: Dictionary, tapped_cell: Vector2i) -> void:
 	var group: Array = []
 	var visited: Dictionary = {}  # match index -> true
 
@@ -267,7 +267,7 @@ func _clear_connected_group(start_match: Dictionary) -> void:
 		return a["pos"].x < b["pos"].x
 	)
 
-	words_cleared.emit(group, 0)
+	words_cleared.emit(group, 0, tapped_cell)
 
 	if cleared_info.size() > 0:
 		_clear_effect.play(cleared_info)
@@ -400,3 +400,24 @@ func _draw() -> void:
 			Vector2(cell_size - CELL_GAP * 2, cell_size - CELL_GAP * 2)
 		)
 		draw_rect(cell_rect, overlay_color)
+
+
+# =============================================================================
+# SAVE/RESUME HYDRATION
+# =============================================================================
+
+## Injects a previously saved headless game state into the visual grid.
+## Used by word_blast_game.gd to resume a game seamlessly after closing
+## the app. Sets placement times in the past so the pop-in animation
+## doesn't replay for tiles that were already on the board.
+func load_snapshot(headless: HeadlessGame) -> void:
+	_reset_cells()
+	for y in range(GRID_SIZE):
+		for x in range(GRID_SIZE):
+			cells[y][x] = headless.cells[y][x]
+			skins[y][x] = headless.skins[y][x]
+			if cells[y][x] != "":
+				# Place it in the past so it doesn't play the pop animation on resume
+				_placement_times[Vector2i(x, y)] = _elapsed - POP_DURATION
+	pending_matches = headless.pending_matches.duplicate(true)
+	queue_redraw()
