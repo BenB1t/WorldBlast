@@ -248,6 +248,7 @@ texture_normal = ExtResource("15_8dnnj")
 oversampling_override = 1.0
 initial_position = 1
 size = Vector2i(340, 420)
+visible = true
 theme_override_styles/panel = SubResource("StyleBoxTexture_ne6ao")
 
 [node name="MarginContainer" type="MarginContainer" parent="ProfileCard" unique_id=575982858]
@@ -345,3 +346,5 @@ grow_vertical = 2
 theme_override_fonts/font = ExtResource("3_m3bi6")
 theme_override_font_sizes/font_size = 24
 text = "SAVE"
+
+[connection signal="pressed" from="IconRow/TextureButton" to="." method="_on_podium_button_pressed"]

@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://c6cyxh7pqg6hl"]
+
+[ext_resource type="Texture2D" uid="uid://bh5h0utrfn73e" path="res://Assets/UI/button_rectangle_depth_gradient.svg" id="1_a4mpm"]
+[ext_resource type="Script" uid="uid://c24muwyt6rnlv" path="res://Scenes/leaderboard_card.gd" id="2_wxjij"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_wxjij"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+texture = ExtResource("1_a4mpm")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+
+[node name="LeaderboardCard" type="PanelContainer" unique_id=119601859]
+custom_minimum_size = Vector2(0, 60)
+offset_right = 40.0
+offset_bottom = 40.0
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxTexture_wxjij")
+script = ExtResource("2_wxjij")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=295474920]
+layout_mode = 2
+
+[node name="RankLabel" type="Label" parent="HBoxContainer" unique_id=1764202179]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="HBoxContainer" unique_id=168049806]
+layout_mode = 2
+
+[node name="ScoreLabel" type="Label" parent="HBoxContainer" unique_id=286323188]
+layout_mode = 2

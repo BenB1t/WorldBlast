@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://c8pevmlro3pkb"]
+
+[ext_resource type="Script" uid="uid://mlowu2x4e1c3" path="res://Scenes/leaderboard.gd" id="1_oxn4a"]
+[ext_resource type="Texture2D" uid="uid://wtaocaucoqyg" path="res://Assets/UI/button_round_depth_gloss_red.svg" id="2_n70i8"]
+[ext_resource type="Texture2D" uid="uid://d0vxobpiqe6oi" path="res://Assets/UI/button_round_gradient_red.svg" id="3_eg6uk"]
+[ext_resource type="Texture2D" uid="uid://dvqpvowvjw3qc" path="res://Assets/UI/arrowLeft.png" id="4_n70i8"]
+[ext_resource type="FontFile" uid="uid://pjvdbvetd45q" path="res://Assets/Fonts/Viga-Regular.ttf" id="5_mb3o2"]
+
+[node name="Leaderboard" type="Control" unique_id=1100530772]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_oxn4a")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=992644713]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1413424594]
+layout_mode = 2
+
+[node name="TopBar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1247981533]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="ReturnButton" type="TextureButton" parent="MarginContainer/VBoxContainer/TopBar" unique_id=330385774]
+layout_mode = 2
+texture_normal = ExtResource("2_n70i8")
+texture_pressed = ExtResource("3_eg6uk")
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/TopBar/ReturnButton" unique_id=711744866]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -25.0
+offset_top = -29.0
+offset_right = 25.0
+offset_bottom = 21.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_n70i8")
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer/TopBar" unique_id=825612143]
+layout_mode = 2
+size_flags_horizontal = 6
+theme_override_colors/font_color = Color(0.22745098, 0.2, 0.16862746, 1)
+theme_override_fonts/font = ExtResource("5_mb3o2")
+theme_override_font_sizes/font_size = 28
+text = "LEADERBOARD"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer/TopBar" unique_id=220389272]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2

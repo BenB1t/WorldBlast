@@ -26,7 +26,7 @@ RankedSession="*uid://m3s5m4n6jdeo"
 [display]
 
 window/size/viewport_width=480
-window/size/viewport_height=854
+window/size/viewport_height=554
 window/stretch/mode="canvas_items"
 
 [physics]

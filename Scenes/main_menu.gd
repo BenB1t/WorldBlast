@@ -34,3 +34,7 @@ func _on_start_pressed() -> void:
 	
 	# 5. Launch the game via the Navigator
 	Nav.go_to_game()
+
+
+func _on_podium_button_pressed() -> void:
+	Nav.go_to_leaderboard()

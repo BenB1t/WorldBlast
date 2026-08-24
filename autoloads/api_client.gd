@@ -1,7 +1,7 @@
 extends Node
 
 # Points to your local Wrangler dev server. Change to your Cloudflare URL later.
-const BASE_URL := "http://localhost:8787"
+const BASE_URL := " "
 
 func _post(endpoint: String, payload: Dictionary) -> Dictionary:
 	var http := HTTPRequest.new()
