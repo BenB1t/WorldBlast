@@ -1,7 +1,7 @@
 extends Node
 
 # Points to your local Wrangler dev server. Change to your Cloudflare URL later.
-const BASE_URL := " "
+const BASE_URL := "http://127.0.0.1:8787"
 
 func _post(endpoint: String, payload: Dictionary) -> Dictionary:
 	var http := HTTPRequest.new()
@@ -62,14 +62,21 @@ func _http_get(endpoint: String) -> Dictionary:
 		
 	return json.data
 
-func start_ranked_game(player_id: String, display_name: String) -> Dictionary:
+func start_ranked_game(player_id: String, display_name: String, country: String = "") -> Dictionary:
 	return await _post("/v1/ranked/start", {
-		"player_id": player_id, "display_name": display_name
+		"player_id": player_id,
+		"display_name": display_name,
+		"country": country
 	})
 
-func finish_ranked_game(game_id: String, player_id: String, score: int, events: Array) -> Dictionary:
+func finish_ranked_game(game_id: String, player_id: String, score: int, events: Array, seed: int = 0, ruleset: String = "ranked_v1") -> Dictionary:
 	return await _post("/v1/ranked/finish", {
-		"game_id": game_id, "player_id": player_id, "score": score, "events": events
+		"game_id": game_id, 
+		"player_id": player_id, 
+		"score": score, 
+		"events": events,
+		"seed": seed,
+		"ruleset_version": ruleset
 	})
 
 # --- LEADERBOARD HELPERS ---

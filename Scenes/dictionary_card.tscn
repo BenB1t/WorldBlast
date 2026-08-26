@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://csykbd3tyeqsj"]
+
+[ext_resource type="Script" uid="uid://ci3rknydi80t7" path="res://Scenes/dictionary_card.gd" id="1_m2051"]
+
+[node name="DictionaryCard" type="PanelContainer" unique_id=2026787954]
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+script = ExtResource("1_m2051")
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1090155289]
+layout_mode = 2
+
+[node name="WordLabel" type="Label" parent="VBox" unique_id=2088060823]
+layout_mode = 2
+
+[node name="DefinitionLabel" type="Label" parent="VBox" unique_id=1298797719]
+layout_mode = 2

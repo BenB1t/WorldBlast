@@ -2,11 +2,16 @@ extends Control
 class_name WordGrid
 
 const GRID_SIZE: int = 8
-const CELL_GAP: int = 2
+const CELL_GAP: int = 3          # inset per side of a cell (gap between cells = 2x)
+const BOARD_PADDING: int = 10    # white margin between panel edge and first cell
+const BOARD_RADIUS: int = 14     # panel corner radius
+const CELL_RADIUS: int = 8       # socket corner radius
 
-const BOARD_BG_COLOR: Color = Color("F5ECDA")
-const EMPTY_CELL_COLOR: Color = Color("E3D6B8")
-const CELL_SHADOW_COLOR: Color = Color("C9B78F")
+## New clean look: floating white panel + light gray rounded sockets.
+const BOARD_BG_COLOR: Color = Color.WHITE
+const BOARD_SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.18)
+const EMPTY_CELL_COLOR: Color = Color(0.925, 0.925, 0.94)
+const CELL_BORDER_COLOR: Color = Color(0.82, 0.83, 0.86)
 const PENDING_HIGHLIGHT: Color = Color(1.0, 0.831, 0.29, 0.35)
 
 ## Pop-in animation played on a tile when it's placed.
@@ -60,14 +65,44 @@ var _shake_tween: Tween
 ## from, if the two were ever coupled by future refactors.
 var _shake_rng := RandomNumberGenerator.new()
 
+## Pre-created once so _draw() never allocates StyleBoxes per frame.
+var _sb_board_shadow: StyleBoxFlat
+var _sb_board: StyleBoxFlat
+var _sb_cell: StyleBoxFlat
+var _sb_pulse: StyleBoxFlat
+var _sb_preview: StyleBoxFlat
+
 
 func _ready() -> void:
 	_reset_cells()
+	_init_styleboxes()
 	_clear_effect = WordClearEffect.new()
 	add_child(_clear_effect)
 	refresh_layout()
 	set_process(true)
 	_shake_rng.randomize()
+
+
+func _init_styleboxes() -> void:
+	_sb_board_shadow = StyleBoxFlat.new()
+	_sb_board_shadow.bg_color = BOARD_SHADOW_COLOR
+	_sb_board_shadow.set_corner_radius_all(BOARD_RADIUS)
+
+	_sb_board = StyleBoxFlat.new()
+	_sb_board.bg_color = BOARD_BG_COLOR
+	_sb_board.set_corner_radius_all(BOARD_RADIUS)
+
+	_sb_cell = StyleBoxFlat.new()
+	_sb_cell.bg_color = EMPTY_CELL_COLOR
+	_sb_cell.border_color = CELL_BORDER_COLOR
+	_sb_cell.set_border_width_all(2)
+	_sb_cell.set_corner_radius_all(CELL_RADIUS)
+
+	_sb_pulse = StyleBoxFlat.new()
+	_sb_pulse.set_corner_radius_all(CELL_RADIUS)
+
+	_sb_preview = StyleBoxFlat.new()
+	_sb_preview.set_corner_radius_all(CELL_RADIUS)
 
 
 func _process(delta: float) -> void:
@@ -102,10 +137,8 @@ func _reset_cells() -> void:
 
 
 func refresh_layout() -> void:
-	custom_minimum_size = Vector2(
-		GRID_SIZE * BlockBlastLayout.cell_size,
-		GRID_SIZE * BlockBlastLayout.cell_size
-	)
+	var side: int = GRID_SIZE * BlockBlastLayout.cell_size + BOARD_PADDING * 2
+	custom_minimum_size = Vector2(side, side)
 	queue_redraw()
 
 
@@ -129,6 +162,17 @@ func has_any_empty_cell() -> bool:
 			if cells[y][x] == "":
 				return true
 	return false
+
+
+## Rect of one cell in LOCAL grid coordinates, including the white
+## board padding. Every draw + hit-test goes through this so the math
+## can never drift out of sync.
+func _cell_rect(x: int, y: int) -> Rect2:
+	var cell_size: int = BlockBlastLayout.cell_size
+	return Rect2(
+		Vector2(BOARD_PADDING + x * cell_size + CELL_GAP, BOARD_PADDING + y * cell_size + CELL_GAP),
+		Vector2(cell_size - CELL_GAP * 2, cell_size - CELL_GAP * 2)
+	)
 
 
 # =============================================================================
@@ -184,7 +228,11 @@ func _handle_tap(local_pos: Vector2) -> void:
 	var cell_size: int = BlockBlastLayout.cell_size
 	if cell_size <= 0:
 		return
-	var cell := Vector2i(int(local_pos.x / cell_size), int(local_pos.y / cell_size))
+	# Account for the white board padding before converting to a cell index.
+	var cell := Vector2i(
+		int((local_pos.x - BOARD_PADDING) / cell_size),
+		int((local_pos.y - BOARD_PADDING) / cell_size)
+	)
 	if not is_in_bounds(cell):
 		return
 
@@ -317,7 +365,7 @@ func _shake(letters_cleared: int) -> void:
 
 
 # =============================================================================
-# DRAWING
+# DRAWING — floating white rounded panel + rounded gray sockets
 # =============================================================================
 
 ## Ease-out-back: overshoots slightly past 1.0 before settling, which reads
@@ -330,25 +378,19 @@ func _pop_scale(t: float) -> float:
 
 
 func _draw() -> void:
-	var cell_size: int = BlockBlastLayout.cell_size
-	draw_rect(Rect2(Vector2.ZERO, custom_minimum_size), BOARD_BG_COLOR)
-
-	const BEVEL: int = 2
+	# Floating white panel with a soft drop shadow underneath.
+	var board_rect := Rect2(Vector2.ZERO, custom_minimum_size)
+	var shadow_rect := Rect2(Vector2(0, 4), custom_minimum_size)
+	_sb_board_shadow.draw(get_canvas_item(), shadow_rect)
+	_sb_board.draw(get_canvas_item(), board_rect)
 
 	for y in range(GRID_SIZE):
 		for x in range(GRID_SIZE):
-			var cell_rect := Rect2(
-				Vector2(x * cell_size + CELL_GAP, y * cell_size + CELL_GAP),
-				Vector2(cell_size - CELL_GAP * 2, cell_size - CELL_GAP * 2)
-			)
+			var cell_rect := _cell_rect(x, y)
 			var letter: String = cells[y][x]
 			if letter == "":
-				# Small drop-shadow under the empty socket gives it a
-				# recessed, "carved into the board" look instead of a
-				# flat painted square.
-				var shadow_rect := Rect2(cell_rect.position + Vector2(0, BEVEL), cell_rect.size)
-				draw_rect(shadow_rect, CELL_SHADOW_COLOR)
-				draw_rect(cell_rect, EMPTY_CELL_COLOR)
+				# Rounded light-gray socket with a subtle border.
+				_sb_cell.draw(get_canvas_item(), cell_rect)
 				continue
 
 			var skin_id: String = skins[y][x]
@@ -367,39 +409,24 @@ func _draw() -> void:
 				var scaled_size: Vector2 = cell_rect.size * scale
 				draw_rect_final = Rect2(center - scaled_size * 0.5, scaled_size)
 
-			# Chunky tile look: a slightly darker "base" peeking out from
-			# under the bottom edge, like the tile has physical thickness,
-			# rather than the sprite floating flat on the board.
-			var base_rect := Rect2(draw_rect_final.position + Vector2(0, BEVEL), draw_rect_final.size)
-			draw_rect(base_rect, CELL_SHADOW_COLOR)
-
 			if tex:
 				draw_texture_rect(tex, draw_rect_final, false)
 			else:
 				draw_rect(draw_rect_final, Color.DARK_CYAN)
 
-	# Pulsing golden highlight over every cell that's part of a valid,
-	# tappable word currently sitting on the board.
+	# Pulsing golden rounded highlight over every cell that's part of a
+	# valid, tappable word currently sitting on the board.
 	if not pending_matches.is_empty():
 		var pulse_t: float = (sin(_elapsed * PULSE_SPEED) + 1.0) * 0.5  # 0..1
 		var pulse_alpha: float = lerp(PULSE_MIN_ALPHA, PULSE_MAX_ALPHA, pulse_t)
-		var pulse_color := Color(PENDING_HIGHLIGHT.r, PENDING_HIGHLIGHT.g, PENDING_HIGHLIGHT.b, pulse_alpha)
-
+		_sb_pulse.bg_color = Color(PENDING_HIGHLIGHT.r, PENDING_HIGHLIGHT.g, PENDING_HIGHLIGHT.b, pulse_alpha)
 		for m in pending_matches:
 			for c in m["cells"]:
-				var cell_rect := Rect2(
-					Vector2(c.x * cell_size + CELL_GAP, c.y * cell_size + CELL_GAP),
-					Vector2(cell_size - CELL_GAP * 2, cell_size - CELL_GAP * 2)
-				)
-				draw_rect(cell_rect, pulse_color)
+				_sb_pulse.draw(get_canvas_item(), _cell_rect(c.x, c.y))
 
 	if is_in_bounds(preview_cell):
-		var overlay_color: Color = Color(0.2, 1.0, 0.4, 0.45) if preview_valid else Color(1.0, 0.2, 0.2, 0.45)
-		var cell_rect := Rect2(
-			Vector2(preview_cell.x * cell_size + CELL_GAP, preview_cell.y * cell_size + CELL_GAP),
-			Vector2(cell_size - CELL_GAP * 2, cell_size - CELL_GAP * 2)
-		)
-		draw_rect(cell_rect, overlay_color)
+		_sb_preview.bg_color = Color(0.2, 1.0, 0.4, 0.45) if preview_valid else Color(1.0, 0.2, 0.2, 0.45)
+		_sb_preview.draw(get_canvas_item(), _cell_rect(preview_cell.x, preview_cell.y))
 
 
 # =============================================================================

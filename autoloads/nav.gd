@@ -9,6 +9,7 @@ extends Node
 const MENU_SCENE := "res://Scenes/main_menu.tscn"
 const GAME_SCENE := "res://plugins/word_blast/scenes/word_blast_game.tscn"
 const LEADERBOARD_SCENE := "res://Scenes/leaderboard.tscn"
+const DICTIONARY_SCENE := "res://Scenes/dictionary.tscn"
 
 const FADE_DURATION := 0.25
 
@@ -44,6 +45,9 @@ func go_to_menu() -> void:
 ## Game -> green restart button
 func restart_game() -> void:
 	_change_scene(GAME_SCENE)
+
+func go_to_dictionary() -> void:
+	_change_scene(DICTIONARY_SCENE)
 
 func go_to_leaderboard() -> void: # ADD THIS
 	_change_scene(LEADERBOARD_SCENE)

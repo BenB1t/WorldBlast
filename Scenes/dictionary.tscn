@@ -1,0 +1,103 @@
+[gd_scene format=3 uid="uid://d3rcwvaq5nkjl"]
+
+[ext_resource type="Script" uid="uid://bugjmgxa2uuoi" path="res://Scenes/dictionary.gd" id="1_s4o58"]
+[ext_resource type="Texture2D" uid="uid://wtaocaucoqyg" path="res://Assets/UI/button_round_depth_gloss_red.svg" id="2_5bnwi"]
+[ext_resource type="Texture2D" uid="uid://d0vxobpiqe6oi" path="res://Assets/UI/button_round_gradient_red.svg" id="3_m2354"]
+[ext_resource type="Texture2D" uid="uid://dvqpvowvjw3qc" path="res://Assets/UI/arrowLeft.png" id="4_lr02p"]
+[ext_resource type="FontFile" uid="uid://bx5tmr2xemvoi" path="res://Assets/Fonts/LilitaOne-Regular.ttf" id="5_vtlab"]
+
+[node name="Dictionary" type="Control" unique_id=1100530772]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_s4o58")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1950193751]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.16078432, 0.67058825, 0.8862745, 1)
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=992644713]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Margin" unique_id=1413424594]
+layout_mode = 2
+
+[node name="TopBar" type="HBoxContainer" parent="Margin/VBox" unique_id=1247981533]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="BackButton" type="TextureButton" parent="Margin/VBox/TopBar" unique_id=330385774]
+layout_mode = 2
+texture_normal = ExtResource("2_5bnwi")
+texture_pressed = ExtResource("3_m2354")
+
+[node name="TextureRect" type="TextureRect" parent="Margin/VBox/TopBar/BackButton" unique_id=711744866]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -25.0
+offset_top = -29.0
+offset_right = 25.0
+offset_bottom = 21.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_lr02p")
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/TopBar" unique_id=825612143]
+layout_mode = 2
+size_flags_horizontal = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_vtlab")
+theme_override_font_sizes/font_size = 28
+text = "WORD VAULT"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="Margin/VBox/TopBar" unique_id=220389272]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+
+[node name="SearchPill" type="PanelContainer" parent="Margin/VBox" unique_id=1472902209]
+layout_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="Margin/VBox/SearchPill" unique_id=1721694198]
+layout_mode = 2
+
+[node name="SearchIcon" type="TextureRect" parent="Margin/VBox/SearchPill/HBox" unique_id=1058546814]
+layout_mode = 2
+
+[node name="SearchInput" type="LineEdit" parent="Margin/VBox/SearchPill/HBox" unique_id=1923604893]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/VBox" unique_id=1713524520]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="ListContainer" type="VBoxContainer" parent="Margin/VBox/Scroll" unique_id=1700914925]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12

@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://wtaocaucoqyg" path="res://Assets/UI/button_round_depth_gloss_red.svg" id="2_n70i8"]
 [ext_resource type="Texture2D" uid="uid://d0vxobpiqe6oi" path="res://Assets/UI/button_round_gradient_red.svg" id="3_eg6uk"]
 [ext_resource type="Texture2D" uid="uid://dvqpvowvjw3qc" path="res://Assets/UI/arrowLeft.png" id="4_n70i8"]
-[ext_resource type="FontFile" uid="uid://pjvdbvetd45q" path="res://Assets/Fonts/Viga-Regular.ttf" id="5_mb3o2"]
+[ext_resource type="FontFile" uid="uid://bx5tmr2xemvoi" path="res://Assets/Fonts/LilitaOne-Regular.ttf" id="5_n70i8"]
 
 [node name="Leaderboard" type="Control" unique_id=1100530772]
 layout_mode = 3
@@ -14,6 +14,15 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_oxn4a")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1950193751]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.16078432, 0.67058825, 0.8862745, 1)
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=992644713]
 layout_mode = 1
@@ -59,8 +68,8 @@ texture = ExtResource("4_n70i8")
 [node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer/TopBar" unique_id=825612143]
 layout_mode = 2
 size_flags_horizontal = 6
-theme_override_colors/font_color = Color(0.22745098, 0.2, 0.16862746, 1)
-theme_override_fonts/font = ExtResource("5_mb3o2")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_n70i8")
 theme_override_font_sizes/font_size = 28
 text = "LEADERBOARD"
 horizontal_alignment = 1
@@ -68,3 +77,19 @@ horizontal_alignment = 1
 [node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer/TopBar" unique_id=220389272]
 custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=1713524520]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ListContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=1700914925]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="LoadingLabel" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/ListContainer" unique_id=1188134913]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Fetching global scores..."

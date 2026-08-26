@@ -1,44 +1,44 @@
 extends PanelContainer
 class_name LeaderboardCard
 
-## Expected scene structure (built in the editor):
-## LeaderboardCard (PanelContainer)  <- this script
-## └── HBoxContainer
-##     ├── RankLabel  (Label)
-##     ├── NameLabel  (Label)
-##     └── ScoreLabel (Label)
+@onready var rank_label: Label = $HBox/RankLabel
+@onready var name_label: Label = $HBox/NameLabel
+@onready var flag_icon: TextureRect = $HBox/FlagIcon
+@onready var score_label: Label = $HBox/ScoreLabel
 
-@onready var rank_label: Label = $HBoxContainer/RankLabel
-@onready var name_label: Label = $HBoxContainer/NameLabel
-@onready var score_label: Label = $HBoxContainer/ScoreLabel
-
-const TOP_COLORS := {
-	1: {"tint": Color(1.00, 0.94, 0.72), "text": Color(0.80, 0.58, 0.05)},  # gold
-	2: {"tint": Color(0.89, 0.92, 0.97), "text": Color(0.50, 0.55, 0.65)},  # silver
-	3: {"tint": Color(1.00, 0.88, 0.74), "text": Color(0.72, 0.44, 0.16)},  # bronze
+## Optional subtle top-3 touch that keeps the clean design:
+## only the RANK NUMBER gets a medal color.
+const TOP_RANK_COLORS := {
+	1: Color("#F6B93B"),  # gold
+	2: Color("#9BA8B6"),  # silver
+	3: Color("#CD8B62"),  # bronze
 }
-const DEFAULT_TEXT := Color(0.28, 0.24, 0.19)
 
-func setup(rank: int, player_name: String, score: int) -> void:
+func setup(rank: int, player_name: String, score: int, country: String = "") -> void:
 	rank_label.text = str(rank)
-	name_label.text = player_name
-	score_label.text = str(score)
+	name_label.text = player_name.to_upper()
+	score_label.text = _format_score(score)
 
-	if TOP_COLORS.has(rank):
-		rank_label.add_theme_color_override("font_color", TOP_COLORS[rank]["text"])
-		_apply_top_tint(TOP_COLORS[rank]["tint"])
-	else:
-		rank_label.add_theme_color_override("font_color", DEFAULT_TEXT)
+	if TOP_RANK_COLORS.has(rank):
+		rank_label.add_theme_color_override("font_color", TOP_RANK_COLORS[rank])
 
-## Tints the card background for top 3. We DUPLICATE the stylebox first so
-## we don't tint every card that shares the same resource.
-func _apply_top_tint(tint: Color) -> void:
-	var base_style = get_theme_stylebox("panel")
-	if base_style is StyleBoxTexture:
-		var style := base_style.duplicate() as StyleBoxTexture
-		style.modulate_color = tint
-		add_theme_stylebox_override("panel", style)
-	elif base_style is StyleBoxFlat:
-		var flat := base_style.duplicate() as StyleBoxFlat
-		flat.bg_color = tint
-		add_theme_stylebox_override("panel", flat)
+	if country != "":
+		FlagLoader.flag_for(country, _on_flag_ready)
+
+func _on_flag_ready(tex: Texture2D) -> void:
+	if tex == null:
+		return
+	flag_icon.texture = tex
+	flag_icon.visible = true
+
+## "15900" -> "15,900" like the design
+func _format_score(value: int) -> String:
+	var s := str(value)
+	var out := ""
+	var n := 0
+	for i in range(s.length() - 1, -1, -1):
+		out = s[i] + out
+		n += 1
+		if n % 3 == 0 and i > 0:
+			out = "," + out
+	return out

@@ -50,6 +50,10 @@ func _draw() -> void:
 
 	var cell_size: int = BlockBlastLayout.cell_size
 	var gap: int = WordGrid.CELL_GAP
+	# The board now draws its sockets BOARD_PADDING pixels inside the white
+	# panel, so the pop-and-fade animation must use the same offset or the
+	# fading tiles would render shifted away from their real sockets.
+	var pad: int = WordGrid.BOARD_PADDING
 
 	for cell_data in _cells:
 		var pos: Vector2i = cell_data.pos
@@ -57,7 +61,7 @@ func _draw() -> void:
 		var skin_id: String = cell_data.skin_id
 
 		var base_rect := Rect2(
-			Vector2(pos.x * cell_size + gap, pos.y * cell_size + gap),
+			Vector2(pad + pos.x * cell_size + gap, pad + pos.y * cell_size + gap),
 			Vector2(cell_size - gap * 2, cell_size - gap * 2)
 		)
 		var center: Vector2 = base_rect.position + base_rect.size * 0.5

@@ -5,8 +5,9 @@
 [ext_resource type="Texture2D" uid="uid://wtaocaucoqyg" path="res://Assets/UI/button_round_depth_gloss_red.svg" id="2_ywp3r"]
 [ext_resource type="Script" uid="uid://bjhdpb48fi3qs" path="res://plugins/word_blast/scenes/letter_tray.gd" id="3"]
 [ext_resource type="Texture2D" uid="uid://d0vxobpiqe6oi" path="res://Assets/UI/button_round_gradient_red.svg" id="3_bekf3"]
-[ext_resource type="Texture2D" uid="uid://dtikgwbmi70yk" path="res://Assets/UI/door.png" id="4_q5san"]
+[ext_resource type="Texture2D" uid="uid://dvqpvowvjw3qc" path="res://Assets/UI/arrowLeft.png" id="4_ywp3r"]
 [ext_resource type="FontFile" uid="uid://pjvdbvetd45q" path="res://Assets/Fonts/Viga-Regular.ttf" id="5_3687y"]
+[ext_resource type="FontFile" uid="uid://bx5tmr2xemvoi" path="res://Assets/Fonts/LilitaOne-Regular.ttf" id="6_bekf3"]
 [ext_resource type="Texture2D" uid="uid://b5t7vikppvw7p" path="res://Assets/UI/button_round_depth_gloss.svg" id="6_df2ts"]
 [ext_resource type="Texture2D" uid="uid://rcjtg5b0tgqn" path="res://Assets/UI/button_round_gradient.svg" id="7_xy86m"]
 [ext_resource type="Texture2D" uid="uid://becarxsm0wx8" path="res://Assets/UI/return.png" id="8_31klc"]
@@ -27,7 +28,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.8784314, 0.827451, 0.6901961, 1)
+color = Color(0.16078432, 0.67058825, 0.8862745, 1)
 
 [node name="Margin" type="MarginContainer" parent="." unique_id=598055904]
 layout_mode = 1
@@ -68,7 +69,7 @@ offset_bottom = 21.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("4_q5san")
+texture = ExtResource("4_ywp3r")
 
 [node name="ScoreBox" type="VBoxContainer" parent="Margin/VBoxContainer/TopBar" unique_id=2133870323]
 layout_mode = 2
@@ -86,8 +87,8 @@ horizontal_alignment = 1
 
 [node name="CurrentScoreLabel" type="Label" parent="Margin/VBoxContainer/TopBar/ScoreBox" unique_id=935343203]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.22745098, 0.2, 0.16862746, 1)
-theme_override_fonts/font = ExtResource("5_3687y")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("6_bekf3")
 theme_override_font_sizes/font_size = 28
 text = "SCORE: 0"
 horizontal_alignment = 1

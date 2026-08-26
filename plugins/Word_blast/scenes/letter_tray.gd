@@ -21,6 +21,11 @@ var slot_containers: Array[Control] = []
 ## scene) without erroring.
 var letter_bag: LetterBag
 
+## Set true before _ready() when the owner will hydrate slots from a saved
+## snapshot. Prevents the initial refill() from drawing 3 letters out of an
+## already-advanced (resumed) LetterBag, which would desync the RNG stream.
+var suppress_refill: bool = false
+
 func _ready() -> void:
 	if letter_bag == null:
 		letter_bag = LetterBag.new()
@@ -31,7 +36,10 @@ func _ready() -> void:
 	slots.resize(SLOT_COUNT)
 	slots.fill(null)
 	refresh_layout()
-	refill()
+	
+	# Only refill if we aren't about to hydrate from a snapshot.
+	if not suppress_refill:
+		refill()
 
 func refresh_layout() -> void:
 	var tray_scale: float = BlockBlastLayout.get_tray_scale()
