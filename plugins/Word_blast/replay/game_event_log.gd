@@ -10,12 +10,18 @@ class_name GameEventLog
 ## Schema v1:
 ##   meta:   { log_version, game_id, seed, ranked, ruleset }
 ##   events: [
+##     # Legacy single-letter placement (pre-piece update):
 ##     {"seq": 1, "type": "place", "letter": "A", "x": 3, "y": 2, "skin": "skin_04"},
-##     {"seq": 2, "type": "clear", "x": 3, "y": 2},
-##     {"seq": 3, "type": "finish", "claimed_score": 145}
+##     # Multi-cell piece placement (current):
+##     {"seq": 2, "type": "place", "shape": "H2", "letters": ["A", "B"],
+##      "x": 3, "y": 2, "slot": 0, "skin": "skin_04"},
+##     {"seq": 3, "type": "clear", "x": 3, "y": 2},
+##     {"seq": 4, "type": "finish", "claimed_score": 145}
 ##   ]
 ## "skin" is cosmetic metadata; the replayer ignores it. A log WITHOUT a
 ## finish event is a game in progress — that is the resume case.
+## The replayer distinguishes the two place formats by the presence of
+## the "shape" key, so old saves still replay.
 
 const LOG_VERSION: int = 1
 
@@ -34,6 +40,7 @@ func begin(id: String, seed: int, ranked: bool, ruleset: String = "") -> void:
 	events.clear()
 	finished = false
 
+## Legacy single-letter placement. Kept for old saves / fallback paths.
 func log_place(letter: String, x: int, y: int, skin_id: String = "") -> void:
 	events.append({
 		"seq": events.size() + 1,
@@ -41,6 +48,21 @@ func log_place(letter: String, x: int, y: int, skin_id: String = "") -> void:
 		"letter": letter,
 		"x": x,
 		"y": y,
+		"skin": skin_id,
+	})
+
+## Records one whole piece placement: shape id + the letters it carries,
+## the anchor cell (top-left of its bounding box), and which tray slot it
+## came from (so replay refills the same slot and keeps the bag in sync).
+func log_place_piece(shape: String, letters: Array, x: int, y: int, slot: int, skin_id: String = "") -> void:
+	events.append({
+		"seq": events.size() + 1,
+		"type": "place",
+		"shape": shape,
+		"letters": letters,
+		"x": x,
+		"y": y,
+		"slot": slot,
 		"skin": skin_id,
 	})
 

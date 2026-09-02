@@ -29,7 +29,7 @@ var availability_tracker: WordAvailabilityTracker = null  # ranked only, else nu
 
 var cells: Array = []   # cells[y][x] = "" or a single uppercase letter
 var skins: Array = []   # skins[y][x] = skin id, passive metadata only
-var tray: Array = []    # the 3 letters currently offered to the player
+var tray: Array = []    # the 3 pieces (Dictionaries) currently offered to the player
 var pending_matches: Array = []
 
 var score: int = 0
@@ -52,43 +52,58 @@ func setup(seed: int, ranked: bool, bag_override: LetterBag = null) -> void:
 	pending_matches = []
 	_reset_cells()
 	tray.clear()
-	# LetterTray._ready() -> refill() draws 3 letters up front; mirror that.
+	# LetterTray._ready() -> refill() draws 3 pieces up front; mirror that.
 	for i in range(TRAY_SIZE):
-		tray.append(letter_bag.random_letter())
+		tray.append(letter_bag.random_piece())
 
 # =============================================================================
 # EVENTS
 # =============================================================================
 
-## Applies a "place" event. Mirrors the live path: the drag is blocked
-## after game over (word_blast_game._on_piece_drag_started), the drop
-## requires an empty cell (_end_drag), the letter must actually be in the
-## tray, and the slot refills immediately (LetterTray.remove_piece ->
-## refill_slot), then turns_since_last_clear increments and game over is
-## re-checked.
+## Applies a "place" event for a multi-cell piece. Mirrors the live path:
+## the drag is blocked after game over, the drop requires all cells to be
+## empty and in bounds, the piece must match the tray slot, and the slot
+## refills immediately, then turns_since_last_clear increments and game
+## over is re-checked.
 ## Returns {"valid": bool, "reason": String}.
-func apply_place(letter: String, x: int, y: int, skin_id: String = "") -> Dictionary:
+func apply_place_piece(shape: String, letters: Array, x: int, y: int, slot: int, skin_id: String = "") -> Dictionary:
 	if game_over:
 		return {"valid": false, "reason": "game_over"}
-	var pos := Vector2i(x, y)
-	if not is_in_bounds(pos):
-		return {"valid": false, "reason": "out_of_bounds"}
-	if cells[pos.y][pos.x] != "":
-		return {"valid": false, "reason": "cell_occupied"}
-	var slot: int = tray.find(letter)
-	if slot == -1:
-		return {"valid": false, "reason": "letter_not_in_tray"}
-	# Consume the letter and immediately refill that slot with the next
-	# bag draw — exactly LetterTray's behavior. If the letter occupies
-	# multiple slots it does not matter which one we pick: the resulting
-	# tray multiset is identical either way.
-	tray[slot] = letter_bag.random_letter()
-	cells[pos.y][pos.x] = letter
-	skins[pos.y][pos.x] = skin_id
+	
+	# If skin_id is empty (old save), generate a random one so the grid looks nice
+	if skin_id == "":
+		skin_id = LetterTile.random_skin_id()
+	
+	var offs := LetterBag.offsets_for(shape)
+	var anchor := Vector2i(x, y)
+	
+	for o in offs:
+		var p: Vector2i = anchor + o
+		if not is_in_bounds(p):
+			return {"valid": false, "reason": "out_of_bounds"}
+		if cells[p.y][p.x] != "":
+			return {"valid": false, "reason": "cell_occupied"}
+	
+	if slot < 0 or slot >= tray.size():
+		return {"valid": false, "reason": "invalid_slot"}
+	
+	for i in range(offs.size()):
+		var p: Vector2i = anchor + offs[i]
+		cells[p.y][p.x] = letters[i]
+		skins[p.y][p.x] = skin_id
+	
+	tray[slot] = letter_bag.random_piece()
 	_rescan_pending_matches()
 	turns_since_last_clear += 1
 	_check_game_over()
 	return {"valid": true, "reason": ""}
+	
+	
+	
+## Legacy single-letter placement. Kept so the replayer can detect old saves
+## and fail them cleanly (the tray/bag model changed with pieces).
+func apply_place(letter: String, x: int, y: int, skin_id: String = "") -> Dictionary:
+	return {"valid": false, "reason": "legacy_single_letter_not_supported"}
 
 ## Applies a "clear" event (player tapped cell x,y). Mirrors grid.gd
 ## _handle_tap -> _clear_connected_group plus word_blast_game scoring.

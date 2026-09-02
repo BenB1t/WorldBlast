@@ -16,10 +16,19 @@ const SKIN_IDS := [
 	"skin_05", "skin_06", "skin_07", "skin_08",
 ]
 
+## Fallback skin used when a cell has an empty skin_id (e.g. from old saves
+## or edge cases). Using a fixed skin ensures the letter doesn't flicker
+## by changing appearance every frame.
+const FALLBACK_SKIN := "skin_01"
+
 static var _cache: Dictionary = {}  # "skin_01/A" -> Texture2D
 
 
 static func get_texture(letter: String, skin_id: String) -> Texture2D:
+	# DEFENSIVE: if skin_id is empty, use a consistent fallback to avoid flicker
+	if skin_id == "":
+		skin_id = FALLBACK_SKIN
+	
 	var key: String = "%s/%s" % [skin_id, letter]
 	if _cache.has(key):
 		return _cache[key]

@@ -20,6 +20,27 @@ const WEIGHTS: Dictionary = {
 static var _total_weight: int = -1
 static var _letters_in_weight_order: Array = []
 
+## Piece shapes: single, duo and trio — horizontal and vertical.
+## Offsets are relative to the piece's anchor (top-left of its bounding
+## box), so placement math is just anchor + offset.
+const SHAPES: Dictionary = {
+	"S":  [Vector2i(0, 0)],
+	"H2": [Vector2i(0, 0), Vector2i(1, 0)],
+	"V2": [Vector2i(0, 0), Vector2i(0, 1)],
+	"H3": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+	"V3": [Vector2i(0, 0), Vector2i(0, 1), Vector2i(0, 2)],
+}
+const SHAPE_IDS: Array = ["S", "H2", "V2", "H3", "V3"]
+
+## Relative spawn odds per shape — edit freely to tune the mix.
+## They are relative weights, not percentages, so any numbers work:
+##   [100, 0, 0, 0, 0]    -> singles only (current)
+##   [34, 22, 22, 11, 11] -> balanced mix
+##   [0, 50, 50, 0, 0]    -> duos only
+##   [0, 0, 0, 50, 50]    -> trios only
+##   [2, 1, 1, 0, 0]      -> mostly singles with occasional duos
+const SHAPE_WEIGHTS: Array = [100, 0, 0, 0, 0]
+
 ## Each LetterBag owns its own RNG stream. This is the whole point of this
 ## rewrite: two LetterBag instances created with the same seed produce the
 ## exact same sequence of letters forever, regardless of what randomness
@@ -54,3 +75,36 @@ func random_letter() -> String:
 		if roll < cumulative:
 			return letter
 	return "E"  # unreachable fallback
+
+
+## Shared helper so every system (piece, tray, grid, headless replay)
+## agrees on a shape's cell offsets. Never mutate the returned array.
+static func offsets_for(shape: String) -> Array:
+	return SHAPES.get(shape, [Vector2i(0, 0)])
+
+
+## Draws one full piece: exactly one shape roll, then one letter roll per
+## cell in offset order. The fixed draw order is what keeps the live game
+## and the headless replay bit-for-bit identical.
+func random_piece() -> Dictionary:
+	var shape: String = _pick_shape()
+	var letters: Array = []
+	for i in range(SHAPES[shape].size()):
+		letters.append(random_letter())
+	return {"shape": shape, "letters": letters}
+
+
+func _pick_shape() -> String:
+	var total: int = 0
+	for w in SHAPE_WEIGHTS:
+		total += int(w)
+	# Safety: an all-zeros config must never crash the RNG.
+	if total <= 0:
+		return "S"
+	var roll: int = _rng.randi_range(1, total)
+	var acc := 0
+	for i in range(SHAPE_IDS.size()):
+		acc += int(SHAPE_WEIGHTS[i])
+		if roll <= acc:
+			return SHAPE_IDS[i]
+	return "S"

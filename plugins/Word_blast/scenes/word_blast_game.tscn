@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://b5t7vikppvw7p" path="res://Assets/UI/button_round_depth_gloss.svg" id="6_df2ts"]
 [ext_resource type="Texture2D" uid="uid://rcjtg5b0tgqn" path="res://Assets/UI/button_round_gradient.svg" id="7_xy86m"]
 [ext_resource type="Texture2D" uid="uid://becarxsm0wx8" path="res://Assets/UI/return.png" id="8_31klc"]
+[ext_resource type="Texture2D" uid="uid://dpm5skr0uirl7" path="res://Assets/UI/emote_idea.png" id="12_q5san"]
 
 [node name="WordBlastGame" type="Control" unique_id=1022956543]
 layout_mode = 3
@@ -138,3 +139,33 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="HintButton" type="TextureButton" parent="." unique_id=1045318053]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -80.0
+offset_top = -72.0
+offset_right = -24.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Hint" type="TextureRect" parent="HintButton" unique_id=656897282]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("12_q5san")
+stretch_mode = 3

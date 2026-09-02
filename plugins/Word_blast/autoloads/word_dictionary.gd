@@ -24,3 +24,8 @@ static func _ensure_loaded() -> void:
 static func is_valid(word: String) -> bool:
 	_ensure_loaded()
 	return _words.has(word.to_upper())
+	
+## Public accessor so features like the hint system can iterate the full list.
+static func get_all_words() -> Array:
+	_ensure_loaded()
+	return _words.keys()

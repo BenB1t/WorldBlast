@@ -34,4 +34,19 @@ func _style_card() -> void:
 
 func setup(word: String, definition: String) -> void:
 	word_label.text = word.to_upper()
-	definition_label.text = definition
+	
+	if definition != "":
+		definition_label.text = definition
+	else:
+		# If we don't have the definition yet, show a placeholder and fetch it!
+		definition_label.text = "Loading definition..."
+		definition_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.58, 1)) # Grey out
+		DefinitionLoader.definition_for(word, _on_definition_ready)
+
+func _on_definition_ready(d: String) -> void:
+	# Called by DefinitionLoader when the API responds
+	if d != "":
+		definition_label.text = d
+		definition_label.add_theme_color_override("font_color", Color(0.25, 0.25, 0.28, 1)) # Restore color
+	else:
+		definition_label.text = "Definition not found."

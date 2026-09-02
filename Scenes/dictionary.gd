@@ -6,14 +6,24 @@ const CARD_SCENE = preload("res://Scenes/dictionary_card.tscn")
 @onready var search_icon: TextureRect = $Margin/VBox/SearchPill/HBox/SearchIcon
 @onready var search_input: LineEdit = $Margin/VBox/SearchPill/HBox/SearchInput
 @onready var list_container: VBoxContainer = $Margin/VBox/Scroll/ListContainer
+@onready var scroll_container: ScrollContainer = $Margin/VBox/Scroll
 
 var all_words: Array = []
+
+## Scroll dragging state (lets you click-drag to scroll on PC)
+var _dragging := false
+var _last_drag_y := 0.0
 
 func _ready() -> void:
 	back_button.pressed.connect(_on_back_pressed)
 	search_input.text_changed.connect(_on_search_changed)
 	_style_search_pill()
+	_hide_scrollbar()
 	_load_words()
+	
+	# Enable mouse-drag scrolling (touch already works natively)
+	if scroll_container:
+		scroll_container.gui_input.connect(_on_scroll_gui_input)
 
 func _style_search_pill() -> void:
 	# White rounded pill container
@@ -45,24 +55,64 @@ func _style_search_pill() -> void:
 	search_input.add_theme_font_size_override("font_size", 18)
 	search_input.placeholder_text = "Search words..."
 
+func _hide_scrollbar() -> void:
+	if scroll_container:
+		scroll_container.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+
+func _on_scroll_gui_input(event: InputEvent) -> void:
+	## Lets you click-and-drag to scroll on PC, just like a finger on a phone.
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_dragging = event.pressed
+		_last_drag_y = event.position.y
+	elif event is InputEventMouseMotion and _dragging:
+		var delta_y : float = event.position.y - _last_drag_y
+		_last_drag_y = event.position.y
+		scroll_container.v_scroll = scroll_container.v_scroll - delta_y
+
 func _load_words() -> void:
-	# Placeholder data for now. Later: load the player's collected words.
-	all_words = [
-		{"word": "blast", "definition": "A destructive wave of highly compressed air spreading outward from an explosion."},
-		{"word": "vault", "definition": "A secure room or compartment for storing valuables."},
-		{"word": "ability", "definition": "The physical or mental power or skill needed to do something."},
-		{"word": "abroad", "definition": "In or to a foreign country."},
-		{"word": "absence", "definition": "The fact of not being in a particular place."},
-	]
+	# Fetch the player's collected words from the Cloudflare API
+	var response = await ApiClient.get_vault(PlayerIdentity.player_id)
+	
+	if response.has("error"):
+		_show_message("Failed to load your vault.\nCheck your connection.")
+		return
+	
+	var words: Array = response.get("words", [])
+	
+	if words.is_empty():
+		_show_message("Your vault is empty.\nClear words in a ranked game\nto collect them!")
+		return
+	
+	# Build the all_words array with just the word (definitions load per-card)
+	all_words = []
+	for w in words:
+		all_words.append({
+			"word": w.get("word", ""),
+			"times_collected": w.get("times_collected", 1)
+		})
+	
 	_populate_list(all_words)
 
+func _show_message(text: String) -> void:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_override("font", load("res://Assets/Fonts/Viga-Regular.ttf"))
+	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.add_theme_color_override("font_color", Color(1, 1, 1, 0.9))
+	list_container.add_child(lbl)
+
 func _populate_list(words: Array) -> void:
+	# Clear existing cards
 	for child in list_container.get_children():
 		child.queue_free()
+	
+	# Create cards
 	for w in words:
 		var card = CARD_SCENE.instantiate()
 		list_container.add_child(card)
-		card.setup(w.word, w.definition)
+		card.setup(w.word, "")  # Definition will be fetched by the card itself
 
 func _on_search_changed(new_text: String) -> void:
 	if new_text.is_empty():

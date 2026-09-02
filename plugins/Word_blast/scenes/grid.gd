@@ -38,8 +38,16 @@ var skins: Array = []  # cells[y][x] = skin_id string, cosmetic only
 ## Each entry: {word: String, cells: Array[Vector2i]}
 var pending_matches: Array = []
 
-var preview_cell: Vector2i = Vector2i(-1, -1)
+## Multi-cell drag preview: every cell the dragged piece would cover.
+var preview_cells: Array = []
 var preview_valid: bool = true
+
+## Hint ghost letters: Vector2i -> letter, drawn semi-transparent over
+## empty cells while hint_alpha > 0. Driven by the hint button.
+var hint_cells: Dictionary = {}
+var hint_alpha: float = 0.0
+var hint_skin: String = ""
+
 
 ## Optional. Left null in casual play, in which case word reuse is
 ## unrestricted (identical to pre-Section-8 behavior). Assign a real
@@ -109,15 +117,15 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 
 	# Keep redrawing every frame while there's a pop-in animation still
-	# playing or any word is pulsing on the board; otherwise stay idle so
-	# we're not burning cycles on a static grid.
+	# playing, any word is pulsing on the board, or hint ghosts are visible;
+	# otherwise stay idle so we're not burning cycles on a static grid.
 	var animating_pop := false
 	for t in _placement_times.values():
 		if _elapsed - t < POP_DURATION:
 			animating_pop = true
 			break
 
-	if animating_pop or not pending_matches.is_empty():
+	if animating_pop or not pending_matches.is_empty() or not hint_cells.is_empty():
 		queue_redraw()
 
 
@@ -176,8 +184,8 @@ func _cell_rect(x: int, y: int) -> Rect2:
 
 
 # =============================================================================
-# PLACEMENT — no longer auto-clears. Just places the letter and refreshes
-# the list of valid-but-uncleared words on the board.
+# PLACEMENT — single letters AND multi-cell pieces. No auto-clear; just
+# writes the letters and refreshes the pending-word list.
 # =============================================================================
 
 func place_letter(pos: Vector2i, letter: String, skin_id: String) -> void:
@@ -186,6 +194,27 @@ func place_letter(pos: Vector2i, letter: String, skin_id: String) -> void:
 	_placement_times[pos] = _elapsed
 	_rescan_pending_matches()
 	queue_redraw()
+
+
+## Places a whole piece: one letter per shape offset, anchored at `anchor`.
+## Caller must have validated with can_place_area() first.
+func place_piece(anchor: Vector2i, offs: Array, letters: Array, skin_id: String) -> void:
+	for i in range(offs.size()):
+		var p: Vector2i = anchor + offs[i]
+		cells[p.y][p.x] = letters[i]
+		skins[p.y][p.x] = skin_id
+		_placement_times[p] = _elapsed
+	_rescan_pending_matches()
+	queue_redraw()
+
+
+## True when every cell the piece would cover is in bounds and empty.
+func can_place_area(anchor: Vector2i, offs: Array) -> bool:
+	for o in offs:
+		var p: Vector2i = anchor + o
+		if not is_in_bounds(p) or cells[p.y][p.x] != "":
+			return false
+	return true
 
 
 ## Rebuilds pending_matches from scratch by scanning every occupied cell.
@@ -326,19 +355,41 @@ func _clear_connected_group(start_match: Dictionary, tapped_cell: Vector2i) -> v
 
 
 # =============================================================================
-# PLACEMENT PREVIEW (single-cell hover — pieces are single letters)
+# PLACEMENT PREVIEW — highlights every cell the dragged piece would cover
 # =============================================================================
 
-func set_preview(pos: Vector2i, valid: bool) -> void:
-	preview_cell = pos
+func set_preview_cells(cs: Array, valid: bool) -> void:
+	preview_cells = cs
 	preview_valid = valid
 	queue_redraw()
 
 
+## Backwards-compatible single-cell wrapper.
+func set_preview(pos: Vector2i, valid: bool) -> void:
+	set_preview_cells([pos], valid)
+
+
 func clear_preview() -> void:
-	if preview_cell == Vector2i(-1, -1):
+	if preview_cells.is_empty():
 		return
-	preview_cell = Vector2i(-1, -1)
+	preview_cells = []
+	queue_redraw()
+
+
+# =============================================================================
+# HINTS — ghost letters written into empty cells
+# =============================================================================
+
+func set_hints(ghosts: Dictionary) -> void:
+	hint_cells = ghosts
+	hint_skin = LetterTile.random_skin_id()
+	hint_alpha = 0.0
+	queue_redraw()
+
+
+func clear_hints() -> void:
+	hint_cells = {}
+	hint_alpha = 0.0
 	queue_redraw()
 
 
@@ -414,6 +465,19 @@ func _draw() -> void:
 			else:
 				draw_rect(draw_rect_final, Color.DARK_CYAN)
 
+	# Semi-transparent "hint" ghost letters written into empty cells.
+	# Uses the skin chosen ONCE in set_hints() so ghosts don't flicker.
+	if not hint_cells.is_empty() and hint_alpha > 0.01:
+		for pos in hint_cells:
+			if cells[pos.y][pos.x] != "":
+				continue
+			var tex: Texture2D = LetterTile.get_texture(hint_cells[pos], hint_skin)
+			var rect := _cell_rect(pos.x, pos.y)
+			if tex:
+				draw_texture_rect(tex, rect, false, Color(1, 1, 1, hint_alpha))
+			else:
+				draw_rect(rect, Color(1, 1, 1, hint_alpha * 0.5))
+
 	# Pulsing golden rounded highlight over every cell that's part of a
 	# valid, tappable word currently sitting on the board.
 	if not pending_matches.is_empty():
@@ -424,9 +488,12 @@ func _draw() -> void:
 			for c in m["cells"]:
 				_sb_pulse.draw(get_canvas_item(), _cell_rect(c.x, c.y))
 
-	if is_in_bounds(preview_cell):
+	# Drag preview: green if the whole piece fits, red if any cell is blocked.
+	if not preview_cells.is_empty():
 		_sb_preview.bg_color = Color(0.2, 1.0, 0.4, 0.45) if preview_valid else Color(1.0, 0.2, 0.2, 0.45)
-		_sb_preview.draw(get_canvas_item(), _cell_rect(preview_cell.x, preview_cell.y))
+		for c in preview_cells:
+			if is_in_bounds(c):
+				_sb_preview.draw(get_canvas_item(), _cell_rect(c.x, c.y))
 
 
 # =============================================================================

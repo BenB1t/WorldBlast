@@ -23,6 +23,7 @@ var active_ruleset: RankedRuleset = null
 @onready var current_score_label: Label = $Margin/VBoxContainer/TopBar/ScoreBox/CurrentScoreLabel
 @onready var quit_button: TextureButton = $Margin/VBoxContainer/TopBar/ReturnButton
 @onready var restart_button: TextureButton = $Margin/VBoxContainer/TopBar/ReturnButton2
+@onready var hint_button: TextureButton = $HintButton
 
 var score: int = 0
 var combo_count: int = 0
@@ -38,14 +39,19 @@ var game_seed: int = -1
 var game_id: String = ""
 var event_log: GameEventLog = null
 
+var _cleared_words: Dictionary = {}
+
 var _resumed_headless: HeadlessGame = null
 var _resumed_log: GameEventLog = null
+
+var _hint_tween: Tween = null
+var _hint_searching: bool = false
+var _board_version: int = 0
 
 
 func _enter_tree() -> void:
 	var tray_node: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
 	
-	# PRIORITY 1: If the Main Menu just fetched a new Ranked seed, USE IT.
 	if RankedSession.is_active:
 		is_ranked = true
 		tray_node.letter_bag = LetterBag.new(RankedSession.game_seed)
@@ -53,9 +59,8 @@ func _enter_tree() -> void:
 		if active_ruleset.WORD_REUSE_ALLOWED:
 			var grid_node: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
 			grid_node.availability_tracker = WordAvailabilityTracker.new()
-		return # Skip local save resume!
+		return
 
-	# PRIORITY 2: Otherwise, check for a local save (Casual or interrupted)
 	var save_log := GameSave.read()
 	if save_log != null and not save_log.finished:
 		var result := GameReplayer.replay(save_log.to_dictionary())
@@ -66,14 +71,10 @@ func _enter_tree() -> void:
 			push_warning("[WordBlast] Save exists but replay failed: %s" % result["errors"])
 
 	if _resumed_headless != null:
-		# Stop the tray's _ready() refill() from drawing 3 extra letters out
-		# of the already-advanced resumed bag (would desync the RNG stream).
 		tray_node.suppress_refill = true
 		tray_node.letter_bag = _resumed_headless.letter_bag
 		is_ranked = _resumed_log.is_ranked
 	else:
-		# Fresh casual: pick the seed NOW so the tray draws from the exact
-		# bag that gets recorded in the event log — required for resume.
 		game_seed = randi()
 		tray_node.letter_bag = LetterBag.new(game_seed)
 
@@ -92,11 +93,11 @@ func _ready() -> void:
 
 	quit_button.pressed.connect(_on_quit_to_menu_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
+	hint_button.pressed.connect(_on_hint_pressed)
 
 	if RankedSession.is_active:
 		_start_new_game()
 	elif _resumed_headless != null:
-		# Hydrate visuals from headless replay
 		event_log = _resumed_log
 		game_seed = _resumed_log.game_seed
 		game_id = _resumed_log.game_id
@@ -126,7 +127,6 @@ func _start_new_game() -> void:
 		is_ranked = true
 		RankedSession.clear_session()
 	else:
-		# game_seed was already chosen in _enter_tree (the bag already uses it).
 		game_id = "casual_" + str(Time.get_unix_time_from_system())
 		is_ranked = false
 
@@ -213,9 +213,12 @@ func _update_drag(pointer_pos: Vector2) -> void:
 	var top_left: Vector2 = _piece_top_left_for(pointer_pos)
 	dragging_piece.global_position = top_left
 
-	var cell_pos: Vector2i = _top_left_to_grid_cell(top_left)
-	var valid: bool = grid.is_cell_empty(cell_pos)
-	grid.set_preview(cell_pos, valid)
+	var anchor: Vector2i = _top_left_to_grid_cell(top_left)
+	var offs: Array = dragging_piece.offsets()
+	var preview_cells := []
+	for o in offs:
+		preview_cells.append(anchor + o)
+	grid.set_preview_cells(preview_cells, grid.can_place_area(anchor, offs))
 
 
 func _end_drag(pointer_pos: Vector2) -> void:
@@ -225,14 +228,17 @@ func _end_drag(pointer_pos: Vector2) -> void:
 	grid.clear_preview()
 
 	var top_left: Vector2 = _piece_top_left_for(pointer_pos)
-	var cell_pos: Vector2i = _top_left_to_grid_cell(top_left)
-	var valid: bool = grid.is_cell_empty(cell_pos)
+	var anchor: Vector2i = _top_left_to_grid_cell(top_left)
+	var offs: Array = piece.offsets()
+	var valid: bool = grid.can_place_area(anchor, offs)
 
 	if valid:
-		grid.place_letter(cell_pos, piece.letter, piece.skin_id)
+		grid.place_piece(anchor, offs, piece.piece.letters, piece.skin_id)
+		grid.clear_hints()
+		_board_version += 1
 
 		if event_log != null:
-			event_log.log_place(piece.letter, cell_pos.x, cell_pos.y, piece.skin_id)
+			event_log.log_place_piece(piece.piece.shape, piece.piece.letters, anchor.x, anchor.y, slot_index, piece.skin_id)
 			GameSave.write(event_log)
 
 		drag_layer.remove_child(piece)
@@ -243,6 +249,9 @@ func _end_drag(pointer_pos: Vector2) -> void:
 		_check_game_over()
 	else:
 		drag_layer.remove_child(piece)
+		# Restore the shrink-to-fit tray scale for this piece's shape
+		var b: Vector2i = piece.bounding_cells()
+		var max_dim: int = max(b.x, b.y)
 		piece.set_display_scale(BlockBlastLayout.get_tray_scale())
 		drag_origin_parent.add_child(piece)
 		drag_origin_parent.move_child(piece, drag_origin_index)
@@ -252,6 +261,7 @@ func _end_drag(pointer_pos: Vector2) -> void:
 	dragging_slot_index = -1
 	drag_origin_parent = null
 	drag_origin_index = -1
+
 
 
 func _piece_top_left_for(pointer_pos: Vector2) -> Vector2:
@@ -269,6 +279,9 @@ func _top_left_to_grid_cell(top_left: Vector2) -> Vector2i:
 
 
 func _on_words_cleared(matches: Array, cascade_depth: int, tapped_cell: Vector2i) -> void:
+	grid.clear_hints()
+	_board_version += 1
+
 	if event_log != null:
 		event_log.log_clear(tapped_cell.x, tapped_cell.y)
 		GameSave.write(event_log)
@@ -280,6 +293,8 @@ func _on_words_cleared(matches: Array, cascade_depth: int, tapped_cell: Vector2i
 
 	var wave_points: int = 0
 	for m in matches:
+		_cleared_words[m["word"]] = true
+		
 		var word_points: int = ScoreRules.score_word(m["word"], cascade_depth, combo_count)
 		if m.get("already_used", false) and active_ruleset != null:
 			word_points = int(round(word_points * active_ruleset.REUSED_WORD_SCORE_MULTIPLIER))
@@ -328,7 +343,8 @@ func _trigger_game_over() -> void:
 				"score": score,
 				"events": events_data,
 				"seed": game_seed,
-				"ruleset_version": "ranked_v1"
+				"ruleset_version": "ranked_v1",
+				"words": _cleared_words.keys()
 			}
 
 			var response = await ApiClient.finish_ranked_game(
@@ -377,3 +393,130 @@ func _on_quit_to_menu_pressed() -> void:
 	if event_log != null and not event_log.finished:
 		GameSave.write(event_log)
 	Nav.go_to_menu()
+
+
+# =============================================================================
+# HINT SYSTEM
+# =============================================================================
+
+func _on_hint_pressed() -> void:
+	if is_game_over or _hint_searching:
+		return
+	_hint_searching = true
+	hint_button.disabled = true
+
+	var hints: Dictionary = await _find_hint_placements()
+
+	_hint_searching = false
+	hint_button.disabled = false
+
+	if hints.is_empty():
+		return
+	grid.set_hints(hints)
+	_animate_hints()
+
+
+func _find_hint_placements() -> Dictionary:
+	var occupied: Array[Vector2i] = []
+	for y in range(WordGrid.GRID_SIZE):
+		for x in range(WordGrid.GRID_SIZE):
+			if grid.cells[y][x] != "":
+				occupied.append(Vector2i(x, y))
+	if occupied.is_empty():
+		return {}
+
+	var start_version := _board_version
+
+	var letter_positions := {}
+	for cell in occupied:
+		var l: String = grid.cells[cell.y][cell.x]
+		if not letter_positions.has(l):
+			letter_positions[l] = []
+		letter_positions[l].append(cell)
+
+	var word_list: Array = WordDictionary.get_all_words().duplicate()
+	word_list.shuffle()
+
+	var placements := []
+	var processed := 0
+
+	for word in word_list:
+		var word_str: String = str(word)
+		var L: int = word_str.length()
+
+		if L < 3 or L > WordGrid.GRID_SIZE:
+			continue
+		var upper: String = word_str.to_upper()
+
+		for letter in letter_positions:
+			var letter_str: String = str(letter)
+			if upper.find(letter_str) == -1:
+				continue
+			for i in range(L):
+				if upper[i] != letter_str:
+					continue
+				for cell in letter_positions[letter]:
+					var cell_v: Vector2i = cell
+					for dir in [Vector2i(1, 0), Vector2i(0, 1)]:
+						# Explicit Vector2i types so Godot never has to infer
+						var start: Vector2i = cell_v - dir * i
+						var end: Vector2i = start + dir * (L - 1)
+						if start.x < 0 or start.y < 0 or end.x >= WordGrid.GRID_SIZE or end.y >= WordGrid.GRID_SIZE:
+							continue
+						var ghosts := {}
+						var used := 0
+						var ok := true
+						for j in range(L):
+							var p: Vector2i = start + dir * j
+							var existing: String = grid.cells[p.y][p.x]
+							if existing == "":
+								ghosts[p] = upper[j]
+							elif existing != upper[j]:
+								ok = false
+								break
+							else:
+								used += 1
+						if ok and used >= 1 and ghosts.size() >= 1:
+							placements.append({"word": upper, "ghosts": ghosts})
+							if placements.size() >= 40:
+								return _pick_hints(placements)
+
+		processed += 1
+		if processed % 200 == 0:
+			await get_tree().process_frame
+			if _board_version != start_version:
+				return {}
+
+	return _pick_hints(placements)
+
+func _pick_hints(placements: Array) -> Dictionary:
+	placements.shuffle()
+	var taken := {}
+	var hints := {}
+	var chosen := 0
+	for p in placements:
+		var overlaps := false
+		for pos in p["ghosts"]:
+			if taken.has(pos):
+				overlaps = true
+				break
+		if overlaps:
+			continue
+		for pos in p["ghosts"]:
+			hints[pos] = p["ghosts"][pos]
+			taken[pos] = true
+		chosen += 1
+		if chosen >= 3:
+			break
+	return hints
+
+
+func _animate_hints() -> void:
+	if _hint_tween and _hint_tween.is_valid():
+		_hint_tween.kill()
+	grid.hint_alpha = 0.0
+	_hint_tween = create_tween()
+	_hint_tween.tween_property(grid, "hint_alpha", 0.45, 0.4)
+	_hint_tween.tween_interval(1.5)
+	_hint_tween.tween_property(grid, "hint_alpha", 0.0, 0.6)
+	_hint_tween.tween_callback(grid.clear_hints)

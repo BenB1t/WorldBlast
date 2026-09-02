@@ -22,6 +22,7 @@
 [ext_resource type="Texture2D" uid="uid://c7ou7n3stfinc" path="res://Assets/UI/arrow_basic_s_small.svg" id="19_6m47u"]
 [ext_resource type="Texture2D" uid="uid://bjestjin2ksn8" path="res://Assets/UI/button_rectangle_depth_gradient_blue.svg" id="20_84iac"]
 [ext_resource type="Texture2D" uid="uid://bkgmm6ar3wwxo" path="res://Assets/UI/button_rectangle_gradient_blue.svg" id="21_5n0dv"]
+[ext_resource type="PackedScene" uid="uid://c8pevmlro3pkb" path="res://Scenes/leaderboard.tscn" id="23_jr6u5"]
 
 [sub_resource type="Theme" id="Theme_tt8ml"]
 default_font = ExtResource("2_8dnnj")
@@ -346,4 +347,5 @@ theme_override_fonts/font = ExtResource("3_m3bi6")
 theme_override_font_sizes/font_size = 24
 text = "SAVE"
 
-[connection signal="pressed" from="IconRow/TextureButton" to="." method="_on_podium_button_pressed"]
+[node name="Leaderboard" parent="ProfileCard/MarginContainer" unique_id=1100530772 instance=ExtResource("23_jr6u5")]
+layout_mode = 2

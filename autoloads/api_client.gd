@@ -79,9 +79,12 @@ func finish_ranked_game(game_id: String, player_id: String, score: int, events: 
 		"ruleset_version": ruleset
 	})
 
-# --- LEADERBOARD HELPERS ---
+# --- LEADERBOARD & VAULT HELPERS ---
 func get_global_leaderboard(limit: int = 100) -> Dictionary:
 	return await _http_get("/v1/leaderboard/global?limit=" + str(limit))
 
 func get_my_rank(player_id: String) -> Dictionary:
-	return await _http_get("/v1/leaderboard/me?player_id=" + player_id)
+	return await _http_get("/v1/leaderboard/me?player_id=" + player_id.uri_encode())
+
+func get_vault(player_id: String) -> Dictionary:
+	return await _http_get("/v1/vault?player_id=" + player_id.uri_encode())

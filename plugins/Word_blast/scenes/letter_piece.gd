@@ -3,53 +3,69 @@ class_name LetterPiece
 
 signal drag_started(piece: LetterPiece)
 
-var letter: String = ""
+var piece: Dictionary = {}   # {"shape": String, "letters": Array}
 var skin_id: String = ""
-
-## Multiplier on BlockBlastLayout.cell_size — 1.0 while dragging, smaller
-## while resting in the tray, same pattern as your original Piece.
+var letter: String = ""      # first letter (compat)
 var display_scale: float = 1.0
 var full_size: Vector2 = Vector2.ZERO
 
+func set_piece(p: Dictionary, skin: String, scale: float) -> void:
+	piece = p
+	skin_id = skin
+	letter = p.get("letters", [""])[0]
+	display_scale = scale
+	_update_size()
+	queue_redraw()
 
-func set_piece(new_letter: String, new_skin_id: String, new_display_scale: float = 1.0) -> void:
-	letter = new_letter
-	skin_id = new_skin_id
-	display_scale = new_display_scale
-	_rebuild()
+func offsets() -> Array:
+	return LetterBag.offsets_for(piece.get("shape", "S"))
 
-
-func refresh_layout(new_display_scale: float = -1.0) -> void:
-	if new_display_scale >= 0.0:
-		display_scale = new_display_scale
-	_rebuild()
-
+func bounding_cells() -> Vector2i:
+	var mx := 0; var my := 0
+	for o in offsets():
+		mx = max(mx, o.x); my = max(my, o.y)
+	return Vector2i(mx + 1, my + 1)
 
 func set_display_scale(s: float) -> void:
 	display_scale = s
-	_rebuild()
-
-
-func _rebuild() -> void:
-	var cell_size: float = BlockBlastLayout.cell_size * display_scale
-	full_size = Vector2(cell_size, cell_size)
-	custom_minimum_size = full_size
+	_update_size()
 	queue_redraw()
 
+func refresh_layout(scale_override: float = -1) -> void:
+	if scale_override > 0: display_scale = scale_override
+	_update_size()
+	queue_redraw()
 
-func _draw() -> void:
-	if letter == "":
-		return
-
+func _update_size() -> void:
+	var b := bounding_cells()
 	var cell_size: float = BlockBlastLayout.cell_size * display_scale
-	var cell_rect := Rect2(Vector2.ZERO, Vector2(cell_size, cell_size))
+	full_size = Vector2(b.x * cell_size, b.y * cell_size)
+	custom_minimum_size = full_size
 
-	var tex: Texture2D = LetterTile.get_texture(letter, skin_id)
-	if tex:
-		draw_texture_rect(tex, cell_rect, false)
-	else:
-		draw_rect(cell_rect, Color.DARK_CYAN)
-
+# Draw letters directly — like your Block Blast piece.gd — instead of
+# child TextureRect nodes. Guarantees every letter tile is pixel-for-pixel
+# the same size, matching the tray's uniform scale perfectly.
+func _draw() -> void:
+	if piece.is_empty():
+		return
+	var cell_size: float = BlockBlastLayout.cell_size * display_scale
+	var offs: Array = offsets()
+	var letters: Array = piece.get("letters", [])
+	for i in range(offs.size()):
+		var o: Vector2i = offs[i]
+		var rect := Rect2(Vector2(o.x, o.y) * cell_size, Vector2(cell_size, cell_size))
+		var letter_str: String = letters[i] if i < letters.size() else ""
+		var tex: Texture2D = LetterTile.get_texture(letter_str, skin_id)
+		if tex:
+			draw_texture_rect(tex, rect, false)
+		else:
+			# Fallback: solid tile with letter text
+			draw_rect(rect, Color(0.85, 0.9, 1.0))
+			var font := ThemeDB.fallback_font
+			if font:
+				var text_size := font.get_string_size(letter_str, HORIZONTAL_ALIGNMENT_CENTER, -1, int(cell_size * 0.6))
+				var text_pos := rect.position + (rect.size - text_size) * 0.5 + Vector2(0, text_size.y * 0.35)
+				draw_string(font, text_pos, letter_str, HORIZONTAL_ALIGNMENT_CENTER, int(rect.size.x), int(cell_size * 0.6), Color.DARK_SLATE_GRAY)
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
