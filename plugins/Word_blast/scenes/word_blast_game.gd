@@ -13,17 +13,27 @@ const DRAG_LIFT := Vector2(0, -80)
 const GAME_OVER_DELAY: float = 1.1
 const COMBO_RESET_TURNS: int = 3
 
+## --- TIME BAR ---
+const TIME_MAX: float = 60.0                      # never passes 1 minute
+const TIME_WORD_BASE: float = 5.0                 # a 3-letter word
+const TIME_WORD_PER_EXTRA_LETTER: float = 2.0     # +2s per letter above 3
+const TIME_CLEAR_CAP: float = 20.0                # max gained per clear wave
+
 @export var is_ranked: bool = false
 
 var active_ruleset: RankedRuleset = null
 
-@onready var grid: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
+@onready var grid: WordGrid = $Margin/VBoxContainer/CenterContainer/BoardRow/Grid
+@onready var time_bar: TimeBar = $Margin/VBoxContainer/CenterContainer/BoardRow/TimeBar
 @onready var tray: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
 @onready var drag_layer: Control = $DragLayer
 @onready var current_score_label: Label = $Margin/VBoxContainer/TopBar/ScoreBox/CurrentScoreLabel
 @onready var quit_button: TextureButton = $Margin/VBoxContainer/TopBar/ReturnButton
 @onready var restart_button: TextureButton = $Margin/VBoxContainer/TopBar/ReturnButton2
 @onready var hint_button: TextureButton = $HintButton
+
+# --- CHANGE 1: Point to the instanced scene in your tree ---
+@onready var game_over_panel: Control = $GameOverPanel
 
 var score: int = 0
 var combo_count: int = 0
@@ -48,6 +58,9 @@ var _hint_tween: Tween = null
 var _hint_searching: bool = false
 var _board_version: int = 0
 
+var time_left: float = TIME_MAX
+var time_active: bool = false
+
 
 func _enter_tree() -> void:
 	var tray_node: LetterTray = $Margin/VBoxContainer/TrayCenterContainer/Tray
@@ -57,7 +70,7 @@ func _enter_tree() -> void:
 		tray_node.letter_bag = LetterBag.new(RankedSession.game_seed)
 		active_ruleset = RankedRuleset.new()
 		if active_ruleset.WORD_REUSE_ALLOWED:
-			var grid_node: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
+			var grid_node: WordGrid = $Margin/VBoxContainer/CenterContainer/BoardRow/Grid
 			grid_node.availability_tracker = WordAvailabilityTracker.new()
 		return
 
@@ -81,7 +94,7 @@ func _enter_tree() -> void:
 	if is_ranked:
 		active_ruleset = RankedRuleset.new()
 		if active_ruleset.WORD_REUSE_ALLOWED:
-			var grid_node: WordGrid = $Margin/VBoxContainer/CenterContainer/Grid
+			var grid_node: WordGrid = $Margin/VBoxContainer/CenterContainer/BoardRow/Grid
 			if _resumed_headless != null and _resumed_headless.availability_tracker != null:
 				grid_node.availability_tracker = _resumed_headless.availability_tracker
 			else:
@@ -94,7 +107,11 @@ func _ready() -> void:
 	quit_button.pressed.connect(_on_quit_to_menu_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
 	hint_button.pressed.connect(_on_hint_pressed)
-
+	
+	# --- CHANGE 2: Connect signals from the editor-built scene ---
+	game_over_panel.menu_pressed.connect(_on_quit_to_menu_pressed)
+	game_over_panel.play_pressed.connect(_on_restart_pressed)
+	
 	if RankedSession.is_active:
 		_start_new_game()
 	elif _resumed_headless != null:
@@ -114,10 +131,26 @@ func _ready() -> void:
 	else:
 		_start_new_game()
 
+	# Timer runs in every mode
+	if _resumed_log != null and _resumed_log.time_left >= 0.0:
+		time_left = _resumed_log.time_left
+	time_active = true
+	time_bar.set_ratio(time_left / TIME_MAX)
+
 	_connect_tray_pieces()
 	tray.tray_refilled.connect(_connect_tray_pieces)
 	get_viewport().size_changed.connect(_configure_layout)
 	grid.words_cleared.connect(_on_words_cleared)
+
+
+func _process(delta: float) -> void:
+	if not time_active or is_game_over:
+		return
+	time_left = max(0.0, time_left - delta)
+	time_bar.set_ratio(time_left / TIME_MAX)
+	if time_left <= 0.0:
+		time_active = false
+		_trigger_game_over()
 
 
 func _start_new_game() -> void:
@@ -129,6 +162,8 @@ func _start_new_game() -> void:
 	else:
 		game_id = "casual_" + str(Time.get_unix_time_from_system())
 		is_ranked = false
+
+	time_left = TIME_MAX
 
 	event_log = GameEventLog.new()
 	event_log.begin(game_id, game_seed, is_ranked, "ranked_v1" if is_ranked else "")
@@ -239,7 +274,7 @@ func _end_drag(pointer_pos: Vector2) -> void:
 
 		if event_log != null:
 			event_log.log_place_piece(piece.piece.shape, piece.piece.letters, anchor.x, anchor.y, slot_index, piece.skin_id)
-			GameSave.write(event_log)
+			_write_save()
 
 		drag_layer.remove_child(piece)
 		tray.remove_piece(slot_index)
@@ -263,7 +298,6 @@ func _end_drag(pointer_pos: Vector2) -> void:
 	drag_origin_index = -1
 
 
-
 func _piece_top_left_for(pointer_pos: Vector2) -> Vector2:
 	var lifted: Vector2 = pointer_pos + DRAG_LIFT
 	return lifted - dragging_piece.full_size * 0.5
@@ -284,7 +318,7 @@ func _on_words_cleared(matches: Array, cascade_depth: int, tapped_cell: Vector2i
 
 	if event_log != null:
 		event_log.log_clear(tapped_cell.x, tapped_cell.y)
-		GameSave.write(event_log)
+		_write_save()
 
 	if cascade_depth == 0:
 		if turns_since_last_clear > COMBO_RESET_TURNS:
@@ -304,6 +338,19 @@ func _on_words_cleared(matches: Array, cascade_depth: int, tapped_cell: Vector2i
 	if cascade_depth == 0:
 		combo_count += 1
 
+	# --- TIME REFILL: skill buys time, never past the 1-minute cap ---
+	if time_active:
+		var gain := 0.0
+		for m in matches:
+			var L: int = str(m["word"]).length()
+			gain += TIME_WORD_BASE + TIME_WORD_PER_EXTRA_LETTER * float(max(0, L - 3))
+		gain = min(gain, TIME_CLEAR_CAP)
+		var before := time_left
+		time_left = min(TIME_MAX, time_left + gain)
+		time_bar.set_ratio(time_left / TIME_MAX)
+		if time_left > before:
+			time_bar.pulse()
+
 
 func _add_score(points: int) -> void:
 	score += points
@@ -312,6 +359,14 @@ func _add_score(points: int) -> void:
 
 func _update_score_label() -> void:
 	current_score_label.text = "SCORE: %d" % score
+
+
+## Saves the event log together with the current clock, so close-and-resume
+## restores the bar exactly where you left it.
+func _write_save() -> void:
+	if event_log != null:
+		event_log.time_left = time_left
+		GameSave.write(event_log)
 
 
 func _check_game_over() -> void:
@@ -365,12 +420,15 @@ func _trigger_game_over() -> void:
 			GameSave.delete_save()
 
 	print("[WordBlast] Game over. Final score: %d" % score)
+	
+	# --- CHANGE 3: Show the editor-built panel ---
+	await get_tree().create_timer(0.6).timeout
+	game_over_panel.show_results(score)
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_WM_GO_BACK_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
-		if event_log != null and not event_log.finished:
-			GameSave.write(event_log)
+		_write_save()
 
 
 func _on_restart_pressed() -> void:
@@ -390,8 +448,7 @@ func _on_restart_pressed() -> void:
 
 
 func _on_quit_to_menu_pressed() -> void:
-	if event_log != null and not event_log.finished:
-		GameSave.write(event_log)
+	_write_save()
 	Nav.go_to_menu()
 
 
@@ -488,6 +545,7 @@ func _find_hint_placements() -> Dictionary:
 				return {}
 
 	return _pick_hints(placements)
+
 
 func _pick_hints(placements: Array) -> Dictionary:
 	placements.shuffle()

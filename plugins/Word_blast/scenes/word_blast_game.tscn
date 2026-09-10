@@ -11,7 +11,9 @@
 [ext_resource type="Texture2D" uid="uid://b5t7vikppvw7p" path="res://Assets/UI/button_round_depth_gloss.svg" id="6_df2ts"]
 [ext_resource type="Texture2D" uid="uid://rcjtg5b0tgqn" path="res://Assets/UI/button_round_gradient.svg" id="7_xy86m"]
 [ext_resource type="Texture2D" uid="uid://becarxsm0wx8" path="res://Assets/UI/return.png" id="8_31klc"]
+[ext_resource type="Script" uid="uid://ckyef4628s2cb" path="res://plugins/word_blast/scenes/time_bar.gd" id="11_3687y"]
 [ext_resource type="Texture2D" uid="uid://dpm5skr0uirl7" path="res://Assets/UI/emote_idea.png" id="12_q5san"]
+[ext_resource type="PackedScene" uid="uid://bslvcg76eo4ou" path="res://plugins/word_blast/scenes/game_over_panel.tscn" id="14_df2ts"]
 
 [node name="WordBlastGame" type="Control" unique_id=1022956543]
 layout_mode = 3
@@ -118,9 +120,18 @@ texture = ExtResource("8_31klc")
 [node name="CenterContainer" type="CenterContainer" parent="Margin/VBoxContainer" unique_id=2091018982]
 layout_mode = 2
 
-[node name="Grid" type="Control" parent="Margin/VBoxContainer/CenterContainer" unique_id=1223078644]
+[node name="BoardRow" type="HBoxContainer" parent="Margin/VBoxContainer/CenterContainer" unique_id=1164689989]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Grid" type="Control" parent="Margin/VBoxContainer/CenterContainer/BoardRow" unique_id=1223078644]
 layout_mode = 2
 script = ExtResource("2")
+
+[node name="TimeBar" type="Control" parent="Margin/VBoxContainer/CenterContainer/BoardRow" unique_id=2029183224]
+layout_mode = 2
+script = ExtResource("11_3687y")
 
 [node name="TrayCenterContainer" type="CenterContainer" parent="Margin/VBoxContainer" unique_id=989926589]
 layout_mode = 2
@@ -169,3 +180,7 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("12_q5san")
 stretch_mode = 3
+
+[node name="GameOverPanel" parent="." unique_id=1412869954 instance=ExtResource("14_df2ts")]
+visible = false
+layout_mode = 1

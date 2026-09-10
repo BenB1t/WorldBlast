@@ -347,5 +347,11 @@ theme_override_fonts/font = ExtResource("3_m3bi6")
 theme_override_font_sizes/font_size = 24
 text = "SAVE"
 
-[node name="Leaderboard" parent="ProfileCard/MarginContainer" unique_id=1100530772 instance=ExtResource("23_jr6u5")]
-layout_mode = 2
+[node name="Leaderboard" parent="." unique_id=1100530772 instance=ExtResource("23_jr6u5")]
+visible = false
+layout_mode = 0
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 20.0
+offset_bottom = 20.0
