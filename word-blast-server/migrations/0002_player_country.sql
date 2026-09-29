@@ -1,0 +1,1 @@
+ALTER TABLE players ADD COLUMN country TEXT NOT NULL DEFAULT '';

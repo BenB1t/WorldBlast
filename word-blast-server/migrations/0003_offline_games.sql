@@ -1,0 +1,1 @@
+ALTER TABLE games ADD COLUMN started_offline INTEGER NOT NULL DEFAULT 0;

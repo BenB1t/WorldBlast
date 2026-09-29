@@ -1,0 +1,8 @@
+name = "word-blast-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "word-blast-db"
+database_id = "8afaf20e-aa4c-4ff0-b205-6d620ac4fe9a"
